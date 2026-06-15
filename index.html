@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard BKK : โรงเรียนกทม. · สำนักงานเขต</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Sarabun', sans-serif; background: #F5F6FA; color: #1a1a2e; min-height: 100vh; }
+
+  header {
+    background: #1a2744;
+    color: #fff;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  header .logo {
+    width: 42px; height: 42px;
+    background: linear-gradient(135deg,#3b82f6,#1d4ed8);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  header h1 { font-size: 17px; font-weight: 600; line-height: 1.3; }
+  header p { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+
+  .top-bar {
+    background: #fff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 10px 16px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .ctrl-btn {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 13px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1.5px solid #cbd5e1;
+    background: #fff;
+    color: #475569;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .ctrl-btn:hover { border-color: #94a3b8; background: #f8fafc; }
+  .ctrl-btn.active { border-color: transparent; color: #fff; }
+  .ctrl-btn.active.npl { background: #dc2626; }
+  .ctrl-btn.active.school { background: #059669; }
+  .ctrl-btn.active.district { background: #7c3aed; }
+  .ctrl-btn.active.sam { background: #0891b2; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+  .layout { display: flex; height: calc(100vh - 120px); }
+
+  #map { flex: 1; height: 100%; z-index: 0; }
+
+  .sidebar {
+    width: 280px;
+    background: #fff;
+    border-left: 1px solid #e2e8f0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 14px;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .stat-card {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 10px 12px;
+    text-align: center;
+  }
+  .stat-num { font-size: 22px; font-weight: 600; line-height: 1; }
+  .stat-lbl { font-size: 11px; color: #64748b; margin-top: 4px; line-height: 1.3; }
+
+  .legend-section { padding: 14px; border-bottom: 1px solid #f1f5f9; }
+  .legend-section h3 { font-size: 12px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+  .legend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; color: #334155; }
+  .legend-bubble {
+    border-radius: 50%; flex-shrink: 0;
+    border: 2px solid rgba(255,255,255,0.8);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.1);
+  }
+
+  .info-section { padding: 14px; }
+  .info-section h3 { font-size: 12px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+  .info-text { font-size: 12px; color: #64748b; line-height: 1.7; }
+
+  .leaflet-popup-content-wrapper {
+    border-radius: 10px !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
+    font-family: 'Sarabun', sans-serif !important;
+  }
+  .leaflet-popup-content { font-size: 13px !important; line-height: 1.6 !important; margin: 10px 14px !important; }
+  .popup-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+  .popup-badge {
+    display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px;
+    margin-bottom: 6px; font-weight: 500;
+  }
+  .popup-row { color: #475569; font-size: 12px; margin-top: 2px; }
+
+  @media (max-width: 640px) {
+    .sidebar { display: none; }
+    .layout { height: calc(100vh - 100px); }
+  }
+</style>
+</head>
+<body>
+
+<script>
+  (function() {
+    const correct = "hdo1234"; // ← เปลี่ยนรหัสผ่านตรงนี้
+    const input = prompt("กรุณาใส่รหัสผ่านเพื่อเข้าใช้งาน:");
+    if (input !== correct) {
+      document.body.innerHTML = "<div style='display:flex;align-items:center;justify-content:center;height:100vh;font-family:Sarabun,sans-serif;font-size:18px;color:#dc2626'>❌ รหัสผ่านไม่ถูกต้อง กรุณาปิดแล้วเปิดใหม่</div>";
+    }
+  })();
+</script>
+
+<header>
+  <div class="logo">🗺️</div>
+  <div>
+    <h1>Dashboard BKK : โรงเรียนกทม. · สำนักงานเขต</h1>
+    <p>กรุงเทพมหานคร — ข้อมูลจากไฟล์จริง อัปเดต 2569</p>
+  </div>
+</header>
+
+<div class="top-bar">
+  <span style="font-size:13px;color:#64748b;margin-right:4px;">แสดง/ซ่อน:</span>
+  <button class="ctrl-btn npl active" id="btn-npl" onclick="toggleLayer('npl')">
+    <span class="dot" style="background:#dc2626"></span> NPL BAM
+  </button>
+  <button class="ctrl-btn school active" id="btn-school" onclick="toggleLayer('school')">
+    <span class="dot" style="background:#059669"></span> โรงเรียนกทม.
+  </button>
+  <button class="ctrl-btn district active" id="btn-district" onclick="toggleLayer('district')">
+    <span class="dot" style="background:#7c3aed"></span> สำนักงานเขต (50 เขต)
+  </button>
+  <button class="ctrl-btn sam active" id="btn-sam" onclick="toggleLayer('sam')">
+    <span class="dot" style="background:#0891b2"></span> SAM Asset
+  </button>
+</div>
+
+<div class="layout">
+  <div id="map"></div>
+  <div class="sidebar">
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-num" style="color:#dc2626">28</div>
+        <div class="stat-lbl">โครงการ BAM</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">2</div>
+        <div class="stat-lbl">โครงการ SAM</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="color:#059669">437</div>
+        <div class="stat-lbl">โรงเรียนในสังกัดกทม.</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="color:#7c3aed">50</div>
+        <div class="stat-lbl">สำนักงานเขต</div>
+      </div>
+    </div>
+
+    <div class="legend-section">
+      <h3>NPL BAM — ขนาดตามจำนวนทรัพย์</h3>
+      <div class="legend-row">
+        <div class="legend-bubble" style="width:22px;height:22px;background:#4FCC4B"></div>
+        <span>ต่ำกว่า 3 แสนบาท</span>
+      </div>
+      <div class="legend-row">
+        <div class="legend-bubble" style="width:22px;height:22px;background:#f97316"></div>
+        <span>ต่ำกว่า 5 แสนบาท</span>
+      </div>
+      <div class="legend-row">
+        <div class="legend-bubble" style="width:22px;height:22px;background:#2563eb"></div>
+        <span>ต่ำกว่า 1 ล้านบาท</span>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:#94a3b8;">● ขนาด bubble = จำนวนทรัพย์</div>
+    </div>
+
+     <div class="legend-section">
+      <h3>SAM Asset</h3>
+      <div class="legend-row">
+        <div class="legend-bubble" style="width:22px;height:22px;background:#0891b2"></div>
+        <span>SAM Asset (bubble สีฟ้า)</span>
+      </div>
+      <div style="margin-top:4px;font-size:11px;color:#94a3b8;">● ขนาด bubble = จำนวนทรัพย์</div>
+    </div>
+
+    <div class="legend-section">
+      <h3>เลเยอร์อื่น</h3>
+      <div class="legend-row">
+        <div style="width:12px;height:12px;border-radius:50%;background:#059669;border:2px solid #fff;box-shadow:0 0 0 1px #059669;flex-shrink:0"></div>
+        <span>โรงเรียนในสังกัดกทม.</span>
+      </div>
+      <div class="legend-row">
+        <div style="width:12px;height:12px;color:#7c3aed;-webkit-text-stroke:2px #fff;paint-order:stroke fill;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));">★</div>
+        <span>สำนักงานเขตกทม.</span>
+      </div>
+    </div>
+
+    <div class="info-section">
+      <h3>วิธีใช้งาน</h3>
+      <p class="info-text">
+        • คลิกปุ่มด้านบนเพื่อแสดง/ซ่อนแต่ละเลเยอร์<br>
+        • คลิกที่ bubble หรือหมุดเพื่อดูรายละเอียด<br>
+        • Scroll หรือ Pinch เพื่อ zoom<br>
+        • ลาก map เพื่อเลื่อนดูพื้นที่
+      </p>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const nplData = [
+  {"lat": 13.917473, "lng": 100.573106, "name": "โครงการเคหะดอนเมือง", "count": 58, "total": 13510000, "avg": 232931.0, "cat": "ต่ำกว่า 3 แสน"}, 
+  {"lat": 13.669431, "lng": 100.66029, "name": "โครงการนิรันดร์ เรซิเดนซ์", "count": 54, "total": 14919000, "avg": 276278.0, "cat": "ต่ำกว่า 3 แสน"},
+  {"lat": 13.698591, "lng": 100.379336, "name": "โครงการมีทรัพย์เรซิเดนซ์", "count": 28, "total": 6104000, "avg": 218000.0, "cat": "ต่ำกว่า 3 แสน"},
+  {"lat": 13.928196, "lng": 100.634485, "name": "โครงการกฤชนครคอนโดทาวน์", "count": 27, "total": 5030000, "avg": 186296.0, "cat": "ต่ำกว่า 3 แสน"},
+  {"lat": 13.701666, "lng": 100.38369, "name": "โครงการวังเกษม คอนโดทาวน์", "count": 22, "total": 5233000, "avg": 237864.0, "cat": "ต่ำกว่า 3 แสน"},
+  {"lat": 13.699306, "lng": 100.380731, "name": "โครงการบ้านสวนนครธน", "count": 20, "total": 4482000, "avg": 224100.0, "cat": "ต่ำกว่า 3 แสน"},
+  {"lat": 13.909661, "lng": 100.675141, "name": "โครงการวัชระคอนโดวิลล์", "count": 16, "total": 3057000, "avg": 191062.0, "cat": "ต่ำกว่า 3 แสน"},
+  {"lat": 13.697049, "lng": 100.383326, "name": "โครงการชลภิญญ์", "count": 15, "total": 3063000, "avg": 204200.0, "cat": "ต่ำกว่า 3 แสน"},
+  {"lat": 13.856735, "lng": 100.621737, "name": "โครงการเคหะรามอินทรา", "count": 13, "total": 3222000, "avg": 247846.0, "cat": "ต่ำกว่า 3 แสน"},
+  {"lat": 13.700294, "lng": 100.380274, "name": "โครงการศิริพงษ์เพลส", "count": 11, "total": 2588000, "avg": 235273.0, "cat": "ต่ำกว่า 3 แสน"},
+  {"lat": 13.814428, "lng": 100.572827, "name": "โครงการแอร์พอร์ท", "count": 11, "total": 2966000, "avg": 269636.0, "cat": "ต่ำกว่า 3 แสน"},
+  {"lat": 13.893762, "lng": 100.610787, "name": "โครงการนิวพอร์ตเพลส", "count": 9, "total": 1555000, "avg": 172778.0, "cat": "ต่ำกว่า 3 แสน"},
+  {"lat": 13.880391, "lng": 100.607623, "name": "โครงการบ้านสวนบางเขน", "count": 9, "total": 2012000, "avg": 223556.0, "cat": "ต่ำกว่า 3 แสน"},
+  {"lat": 13.67516, "lng": 100.415019, "name": "โครงการยุติธรรมทาวเวอร์", "count": 9, "total": 2549000, "avg": 283222.0, "cat": "ต่ำกว่า 3 แสน"},
+  {"lat": 13.928489, "lng": 100.634347, "name": "โครงการสายไหมพูนสุข", "count": 8, "total": 1470000, "avg": 183750.0, "cat": "ต่ำกว่า 3 แสน"},
+  {"lat": 13.846702, "lng": 100.659196, "name": "โครงการอินทราคอนโดวิลล์", "count": 8, "total": 1652000, "avg": 206500.0, "cat": "ต่ำกว่า 3 แสน"},
+  {"lat": 13.998584, "lng": 100.65303, "name": "โครงการนาวินคอนโด", "count": 7, "total": 1481000, "avg": 211571.0, "cat": "ต่ำกว่า 3 แสน"},
+  {"lat": 13.920203, "lng": 100.590867, "name": "ดอนเมืองคอนโดทาวน์", "count": 7, "total": 1382000, "avg": 197429.0, "cat": "ต่ำกว่า 3 แสน"},
+  {"lat": 13.787407, "lng": 100.629309, "name": "โครงการ 101 แมนชั่น", "count": 7, "total": 1673000, "avg": 239000.0, "cat": "ต่ำกว่า 3 แสน"},
+  {"lat": 13.678034, "lng": 100.368789, "name": "โครงการศศิธร", "count": 7, "total": 1701000, "avg": 243000.0, "cat": "ต่ำกว่า 3 แสน"},
+  {"lat": 13.674549, "lng": 100.660954, "name": "โครงการสวนหลวงคอนโดทาวน์", "count": 6, "total": 1611000, "avg": 268500.0, "cat": "ต่ำกว่า 3 แสน"},
+  {"lat": 13.872745, "lng": 100.608605, "name": "โครงการคริสตัลสแควร์", "count": 6, "total": 1663000, "avg": 277167.0, "cat": "ต่ำกว่า 3 แสน"},
+  {"lat": 13.766004, "lng": 100.609741, "name": "โครงการเทพลีลาคอนโดทาวน์", "count": 28, "total": 11361000, "avg": 405750.0, "cat": "ต่ำกว่า 5 แสน"},
+  {"lat": 13.767089, "lng": 100.62314, "name": "โครงการ 124 ไพรเวซี่", "count": 20, "total": 8930000, "avg": 446500.0, "cat": "ต่ำกว่า 5 แสน"},
+  {"lat": 13.669431, "lng": 100.66029, "name": "โครงการนิรันดร์ เรซิเดนซ์", "count": 11, "total": 6627000, "avg": 602455.0, "cat": "ต่ำกว่า 1 ล้าน"},
+  {"lat": 13.828792, "lng": 100.648891, "name": "โครงการคูณสุขวิลล์", "count": 11, "total": 7078000, "avg": 643455.0, "cat": "ต่ำกว่า 1 ล้าน"},
+  {"lat": 13.767089, "lng": 100.62314, "name": "โครงการ 124 ไพรเวซี่", "count": 6, "total": 3218000, "avg": 536333.0, "cat": "ต่ำกว่า 1 ล้าน"},
+  {"lat": 13.766004, "lng": 100.609741, "name": "โครงการเทพลีลาคอนโดทาวน์", "count": 6, "total": 4281000, "avg": 713500.0, "cat": "ต่ำกว่า 1 ล้าน"},
+  {"lat": 13.711454, "lng": 100.447775, "name": "โครงการเมโทร พาร์ค สาทร", "count": 49, "total": 56280000, "avg": 11485714, "cat": "ต่ำกว่า 1 ล้าน"},
+];
+
+const samData = [
+  {"lat": 13.920203, "lng": 100.590867, "name": "ดอนเมืองคอนโดทาวน์", "count": 142, "total": 23572000},
+  {"lat": 13.77415, "lng": 100.56134, "name": "ดอนเมืองคอนโดทาวน์", "count": 16, "total": 000000},
+];
+
+const districtData = [
+  {"lat": 13.74236204, "lng": 100.5859443, "name": "สำนักงานเขตวัฒนา", "address": "1000/29-34 อาคารลิเบอร์ตี้พลาซ่า ชั้น 6-8ถนนสุขุมวิท แขวงคลองตันเหนือ เขตวัฒนา กรุงเทพมหานคร 10110", "tel": "0 2381 8930"},
+  {"lat": 13.91024974, "lng": 100.5947802, "name": "สำนักงานเขตดอนเมือง", "address": "999 ถ.เชิดวุฒากาศ แขวงดอนเมือง เขตดอนเมือง กรุงเทพมหานคร 10210", "tel": "0 2565 9424-33"}, 
+  {"lat": 13.70812721, "lng": 100.5837081, "name": "สำนักงานเขตคลองเตย", "address": "599  สามแยกกล้วยน้ำไท  แขวงคลองเตย  เขตคลองเตย  กรุงเทพมหานคร 10110", "tel": "0 2240 2121"}, 
+  {"lat": 13.73062221, "lng": 100.509213, "name": "สำนักงานเขตคลองสาน", "address": "861 ถนนลาดหญ้า แขวงคลองสาน เขตคลองสาน กรุงเทพมหานคร 10600", "tel": "0 2437 5279"}, 
+  {"lat": 13.85958136, "lng": 100.7041511, "name": "สำนักงานเขตคลองสามวา", "address": "111 ถนนเลียบคลองสอง แขวงบางชัน เขตคลองสามวา กรุงเทพมหานคร 10510", "tel": "0 2548 0321"}, 
+  {"lat": 13.79944208, "lng": 100.6826917, "name": "สำนักงานเขตคันนายาว", "address": "9 ซอย 01 กาญจนาภิเษก 11/5 ถนนกาญจนาภิเษก แขวงคันนายาว เขตคันนายาว กรุงเทพมหานคร 10230", "tel": "0 2379 9961-3"}, 
+  {"lat": 13.82334115, "lng": 100.5608687, "name": "สำนักงานเขตจตุจักร", "address": "5 ซอยวิภาวดีรังสิต 34 ถนนวิภาวดีรังสิต เขตจตุจักร กรุงเทพมหานคร 10900", "tel": "0 2513 3444"}, 
+  {"lat": 13.67735083, "lng": 100.4841255, "name": "สำนักงานเขตจอมทอง", "address": "38 พระรามที่ 2 ซอย 3 แยก 3 แขวงบางมด เขตจอมทอง กรุงเทพมหานคร 10150", "tel": "0 2427 4892"}, 
+  {"lat": 13.76971365, "lng": 100.5534375, "name": "สำนักงานเขตดินแดง", "address": "99 ถนน มิตรไมตรี แขวงดินแดง เขตดินแดง กรุงเทพมหานคร 10400", "tel": "02 245 4608"}, 
+  {"lat": 13.77699781, "lng": 100.520377, "name": "สำนักงานเขตดุสิต", "address": "317 ถนนสุโขทัย ดุสิต กรุงเทพมหานคร 10300", "tel": "0 2243 5311-5"}, 
+  {"lat": 13.77686919, "lng": 100.4564512, "name": "สำนักงานเขตตลิ่งชัน", "address": "333 ถนนชักพระ แขวงคลองชักพระ เขตตลิ่งชัน กรุงเทพมหานคร 10170", "tel": "0 2424 1415"}, 
+  {"lat": 13.77300837, "lng": 100.3536665, "name": "สำนักงานเขตทวีวัฒนา", "address": "1 ถนนอุทยาน ซอย 5 แขวงทวีวัฒนา เขตทวีวัฒนา กรุงเทพมหานคร 10170", "tel": "0 2441 4973-84"}, 
+  {"lat": 13.6115399, "lng": 100.5086859, "name": "สำนักงานเขตทุ่งครุ", "address": "2 ซอยประชาอุทิศ 86 แขวงทุ่งครุ เขตทุ่งครุ กรุงเทพมหานคร 10140", "tel": "0 2464 4380"}, 
+  {"lat": 13.76567505, "lng": 100.6477172, "name": "สำนักงานเขตบางกะปิ", "address": "189 ถนนลาดพร้าว แขวงคลองจั่น เขตบางกะปิ กรุงเทพมหานคร 10240", "tel": "0 2377 5494"}, 
+  {"lat": 13.66089688, "lng": 100.435316, "name": "สำนักงานเขตบางขุนเทียน", "address": "164 ถนนพระรามที่ 2 แขวงแสมดำ เขตบางขุนเทียน กรุงเทพมหานคร 10150", "tel": "0 2415 2425"}, 
+  {"lat": 13.72340052, "lng": 100.4761761, "name": "สำนักงานเขตบางกอกใหญ่", "address": "1 ถนนรัชดาภิเษก แขวงวัดท่าพระ เขตบางกอกใหญ่ กรุงเทพมหานคร 10600", "tel": "0 2457 0069"}, 
+  {"lat": 13.77663593, "lng": 100.5792762, "name": "สำนักงานเขตห้วยขวาง", "address": "2 ถนนประชาอุทิศ แขวงห้วยขวาง เขตห้วยขวาง กรุงเทพมหานคร 10310", "tel": "0 2277 9100 - 3"}, 
+  {"lat": 13.88740105, "lng": 100.5792001, "name": "สำนักงานเขตหลักสี่", "address": "999 ซอยแจ้งวัฒนะ 10 ถนนแจ้งวัฒนะ แขวงทุ่งสองห้อง กรุงเทพมหานคร 10210", "tel": "0 2982 2081-2"}, 
+  {"lat": 13.85582363, "lng": 100.8626278, "name": "สำนักงานเขตหนองจอก", "address": "16 ถนนเชื่อมสัมพันธ์ แขวงกระทุ่มราย เขตหนองจอก กทม. 10530", "tel": "0 2543 1143"}, 
+  {"lat": 13.70540532, "lng": 100.3491455, "name": "สำนักงานเขตหนองแขม", "address": "555 ถ.เพชรเกษม แขวงหนองค้างพลู เขตหนองแขม กรุงเทพมหานคร 10160", "tel": "02 421 0939"}, 
+  {"lat": 13.89513915, "lng": 100.6608324, "name": "สำนักงานเขตสายไหม", "address": "222 ถ.สุขาภิบาล5 แขวงออเงิน เขตสายไหม กรุงเทพมหานคร 10220", "tel": "0 2158 7349"}, 
+  {"lat": 13.70815507, "lng": 100.5260998, "name": "สำนักงานเขตสาทร", "address": "59 ซอย จันทน์ 18/7 แขวงทุ่งวัดดอน เขตสาทร กรุงเทพมหานคร 10120", "tel": "0 2212 8112"}, 
+  {"lat": 13.87337139, "lng": 100.596073, "name": "สำนักงานเขตบางเขน", "address": "14 ถนนพหลโยธิน แขวงอนุสาวรีย์ เขตบางเขน กรุงเทพมหานคร 10220", "tel": "0 2521 0666"}, 
+  {"lat": 13.69301498, "lng": 100.5023256, "name": "สำนักงานเขตบางคอแหลม", "address": "193 ถนนพระรามที่ 3 ซอย 7 แขวงบางคอแหลม เขตบางคอแหลม กรุงเทพมหานคร 10120", "tel": "0 2291 3800"}, 
+  {"lat": 13.69566832, "lng": 100.4093251, "name": "สำนักงานเขตบางแค", "address": "1 ถนนกาญจนาภิเษก 0010 แยก 2 แขวงบางแค เขตบางแค กรุงเทพมหานคร 10160", "tel": "0 2867 1635"}, 
+  {"lat": 13.80965078, "lng": 100.5373209, "name": "สำนักงานเขตบางซื่อ", "address": "99 ซอยกานต์ประภา ถนนริมคลองประปา แขวงบางซื่อ เขตบางซื่อ กรุงเทพมหานคร 10800", "tel": "0 2586 9977"}, 
+  {"lat": 13.68120953, "lng": 100.5920326, "name": "สำนักงานเขตบางนา", "address": "888 ถนน สรรพาวุธ แขวงบางนาเหนือ เขตบางนา กรุงเทพมหานคร 10260", "tel": "0 2173 5253-7"}, 
+  {"lat": 13.63399054, "lng": 100.36876, "name": "สำนักงานเขตบางบอน", "address": "1 ซอยเอกชัย 135/1 แขวงบางบอนใต้ เขตบางบอน กรุงเทพมหานคร 10150", "tel": "0 2450 3201-10"}, 
+  {"lat": 13.79399633, "lng": 100.5049394, "name": "สำนักงานเขตบางพลัด", "address": "39 ถนนจรัญสนิทวงศ์ แขวงบางอ้อ เขตบางพลัด กรุงเทพมหานคร 10700", "tel": "0 2424 3777"}, 
+  {"lat": 13.73068698, "lng": 100.5236842, "name": "สำนักงานเขตบางรัก", "address": "5 ถ.นเรศ แขวงสี่พระยา เขตบางรัก กรุงเทพมหานคร 10500", "tel": "0 2236 1395"}, 
+  {"lat": 13.78544931, "lng": 100.669561, "name": "สำนักงานเขตบึงกุ่ม", "address": "999 ถนนเสรีไทย 43 แขวงคลองกุ่ม เขตบึงกุ่ม  กรุงเทพมหานคร 10240", "tel": "0 2364 6888"}, 
+  {"lat": 13.74478885, "lng": 100.5221386, "name": "สำนักงานเขตปทุมวัน", "address": "12/1-4 ซอยรองเมือง 5 แขวงรองเมือง เขตปทุมวัน กรุงเทพมหานคร 10330", "tel": "02214 3004"}, 
+  {"lat": 13.71699023, "lng": 100.6947222, "name": "สำนักงานเขตประเวศ", "address": "33 ถนนเฉลิมพระเกียรติ ร.9 ซอย 81 ถ.เฉลิมพระเกียรติ แขวง/เขตประเวศ กรุงเทพมหานคร 10250", "tel": "0 2328 8981"}, 
+  {"lat": 13.75807726, "lng": 100.5132358, "name": "สำนักงานเขตป้อมปราบศัตรูพ่าย", "address": "50 ถนนศุภมิตร แขวงวัดโสมนัส เขตป้อมปราบศัตรูพ่าย กรุงเทพมหานคร 10100", "tel": "0 2282 4902"}, 
+  {"lat": 13.76459198, "lng": 100.498888, "name": "สำนักงานเขตพระนคร", "address": "78 ซอยสามเสน 3 แขวงวัดสามพระยา เขตพระนคร กรุงเทพมหานคร 10200", "tel": "0 2281 5370"}, 
+  {"lat": 13.77990469, "lng": 100.5427676, "name": "สำนักงานเขตพญาไท", "address": "13 ซอยอารีย์ 2 ถนนพหลโยธิน แขวงพญาไท เขตพญาไท กรุงเทพมหานคร 10400", "tel": "0 2279 4140-3"}, 
+  {"lat": 13.70211744, "lng": 100.6017604, "name": "สำนักงานเขตพระโขนง", "address": "1792 ถนนสุขุมวิท แขวงพระโขนงใต้ เขตพระโขนง กรุงเทพมหานคร 10260", "tel": "0 2311 2510"}, 
+  {"lat": 13.7146824, "lng": 100.4369829, "name": "สำนักงานเขตภาษีเจริญ", "address": "46 ซอยเพชรเกษม 54 แขวงบางหว้า เขตภาษีเจริญ กรุงเทพมหานคร 10160", "tel": "0 2413 0565"}, 
+  {"lat": 13.81387136, "lng": 100.7315651, "name": "สำนักงานเขตมีนบุรี", "address": "1471/1 ถ.ลาดกระบัง แขวงลาดกระบัง เขตลาดกระบัง กรุงเทพมหานคร 10520", "tel": "0 2326 9149"}, 
+  {"lat": 13.69642066, "lng": 100.5423509, "name": "สำนักงานเขตยานนาวา", "address": "209/1 ถ.นราธิวาสราชนครินทร์ 28 แขวงช่องนนทรี เขตยานนาวา กรุงเทพมหานคร 10120", "tel": "0 2294 2393-4"}, 
+  {"lat": 13.75910369, "lng": 100.5343546, "name": "สำนักงานเขตราชเทวี", "address": "10 ถ.พญาไท แขวงทุ่งพญาไท เขตราชเทวี กรุงเทพมหานคร 10400", "tel": "0 2354 4201ต่อ6756-8"}, 
+  {"lat": 13.68212871, "lng": 100.5057602, "name": "สำนักงานเขตราษฎร์บูรณะ", "address": "1 ถ.ราษฎร์บูรณะ แขวงราษฎร์บูรณะ เขตราษฎร์บูรณะ กรุงเทพมหานคร 10140", "tel": "0 2427 4727"}, 
+  {"lat": 13.72342041, "lng": 100.7840316, "name": "สำนักงานเขตลาดกระบัง", "address": "4  ซอยลาดกระบัง 15  ถนนลาดกระบัง-อ่อนนุช  แขวงลาดกระบัง  เขตลาดกระบัง  กทม.10520", "tel": "02-326 9149,3269012"}, 
+  {"lat": 13.803516, "lng": 100.607426, "name": "สำนักงานเขตลาดพร้าว", "address": "208 ถนนนาคนิวาส ซอยนาคนิวาส 8 แขวงลาดพร้าว เขตลาดพร้าว กรุงเทพมหานคร 10230", "tel": "0 2530 6641"}, 
+  {"lat": 13.783617, "lng": 100.614984, "name": "สำนักงานเขตวังทองหลาง", "address": "999 ซอยรามคำแหง 39 แขวงพลับพลา เขตวังทองหลาง กรุงเทพมหานคร 10310", "tel": "0 2538 5350"}, 
+  {"lat": 13.730416, "lng": 100.651483, "name": "สำนักงานเขตสวนหลวง", "address": "2998 ถ.พัฒนาการ แขวงพัฒนาการ เขตสวนหลวง กรุงเทพมหานคร 10250", "tel": "0 2322 6688"}, 
+  {"lat": 13.768797, "lng": 100.685857, "name": "สำนักงานเขตสะพานสูง", "address": "5 ซอยรามคำแหง 118 ถนนรามคำแหง แขวง/เขตสะพานสูง กรุงเทพมหานคร 10240", "tel": "0 2372 2940-44"}, 
+  {"lat": 13.73157, "lng": 100.513796, "name": "สำนักงานเขตสัมพันธวงศ์", "address": "37 ถนนโยธา แขวงตลาดน้อย เขตสัมพันธวงศ์ กทม. 10100", "tel": "0 2233 1224-28"}, 
+  {"lat": 13.72497, "lng": 100.48571, "name": "สำนักงานเขตธนบุรี", "address": "160 ถนนเทอดไทย แขวงบางยี่เรือ เขตธนบุรี กรุงเทพมหานคร 10600", "tel": "0 2465 0025"}, 
+  {"lat": 13.76282, "lng": 100.478023, "name": "สำนักงานเขตบางกอกน้อย", "address": "9/99 ถนนบางขุนนนท์ แขวงบางขุนนนท์ เขตบางกอกน้อย กรุงเทพมหานคร 10700", "tel": "0 2424 0056"}, 
+];
+
+const schoolData = [
+  {lat:13.78115,lng:100.4792,name:"โรงเรียนวัดใหม่อมตรส",students:25},
+  {lat:13.85712,lng:100.8603,name:"โรงเรียนวัดหนองจอก",students:1908},
+  {lat:13.85529,lng:100.8694,name:"โรงเรียนสุเหร่าหะยีมินา",students:825},
+  {lat:13.87431,lng:100.8834,name:"โรงเรียนสุเหร่าบ้านเกาะ",students:249},
+  {lat:13.88799,lng:100.8495,name:"โรงเรียนลำบุหรี่พวง",students:85},
+  {lat:13.8635,lng:100.8542,name:"โรงเรียนหนองจอกพิทยานุสรณ์",students:2356},
+  {lat:13.85032,lng:100.8972,name:"โรงเรียนสุเหร่าศาลาแดง",students:202},
+  {lat:13.85342,lng:100.8854,name:"โรงเรียนสุเหร่าใหม่ (หนองจอก)",students:321},
+  {lat:13.84792,lng:100.8909,name:"โรงเรียนสามแยกท่าไข่",students:155},
+  {lat:13.81578,lng:100.9352,name:"โรงเรียนหลวงแพ่ง",students:241},
+  {lat:13.83536,lng:100.9105,name:"โรงเรียนนีลราษฎร์อุปถัมภ์",students:118},
+  {lat:13.85511,lng:100.8286,name:"โรงเรียนบ้านเจียรดับ",students:724},
+  {lat:13.85062,lng:100.8038,name:"โรงเรียนวัดทรัพย์สโมสร",students:786},
+  {lat:13.82618,lng:100.8161,name:"โรงเรียนสุเหร่านาตับ",students:175},
+  {lat:13.82018,lng:100.8318,name:"โรงเรียนสุเหร่าอีรั้ว",students:190},
+  {lat:13.83225,lng:100.8413,name:"โรงเรียนอิสลามลำไทร",students:241},
+  {lat:13.81891,lng:100.8505,name:"โรงเรียนบ้านลำต้นกล้วย",students:511},
+  {lat:13.91373,lng:100.863,name:"โรงเรียนวัดพระยาปลา",students:750},
+  {lat:13.90471,lng:100.8899,name:"โรงเรียนวัดแสนเกษม",students:165},
+  {lat:13.88799,lng:100.9061,name:"โรงเรียนวัดใหม่เจริญราษฎร์",students:67},
+  {lat:13.88903,lng:100.8075,name:"โรงเรียนวัดสามง่าม",students:810},
+  {lat:13.92922,lng:100.8223,name:"โรงเรียนวัดสีชมพู",students:127},
+  {lat:13.878,lng:100.82,name:"โรงเรียนลำเจดีย์",students:151},
+  {lat:13.90475,lng:100.7928,name:"โรงเรียนสุเหร่าคลองเก้า",students:230},
+  {lat:13.90414,lng:100.8121,name:"โรงเรียนสุเหร่าคลองสิบ",students:80},
+  {lat:13.91294,lng:100.839,name:"โรงเรียนสุเหร่าคลองสิบเอ็ด",students:126},
+  {lat:13.89513,lng:100.8286,name:"โรงเรียนสุเหร่าสนามกลางลำ",students:132},
+  {lat:13.79248,lng:100.9114,name:"โรงเรียนผลลีรุ่งเรือง",students:85},
+  {lat:13.81108,lng:100.8782,name:"โรงเรียนวัดราษฎร์บำรุง",students:456},
+  {lat:13.80239,lng:100.8884,name:"โรงเรียนคลองสอง",students:131},
+  {lat:13.78658,lng:100.8589,name:"โรงเรียนคารีอุปถัมภ์",students:143},
+  {lat:13.8042,lng:100.8597,name:"โรงเรียนสุเหร่าลำแขก",students:557},
+  {lat:13.80368,lng:100.8459,name:"โรงเรียนศิริวังวิทยาคาร",students:205},
+  {lat:13.76975,lng:100.8365,name:"โรงเรียนสังฆประชานุสรณ์",students:795},
+  {lat:13.79168,lng:100.8128,name:"โรงเรียนวัดอู่ตะเภา",students:233},
+  {lat:13.79168,lng:100.8355,name:"โรงเรียนลำผักชี",students:207},
+  {lat:13.75548,lng:100.8887,name:"โรงเรียนวัดลำต้อยติ่ง",students:414},
+  {lat:13.6821,lng:100.4955,name:"โรงเรียนวัดบางปะกอก",students:2286},
+  {lat:13.66933,lng:100.4921,name:"โรงเรียนรัตนจีนะอุทิศ",students:772},
+  {lat:13.68008,lng:100.5036,name:"โรงเรียนวัดประเสริฐสุทธาวาส",students:138},
+  {lat:13.6753,lng:100.5199,name:"โรงเรียนวัดแจงร้อน",students:237},
+  {lat:13.67239,lng:100.5133,name:"โรงเรียนวัดสน",students:192},
+  {lat:13.67353,lng:100.503,name:"โรงเรียนวัดสารอด",students:198},
+  {lat:13.67698,lng:100.3394,name:"โรงเรียนวัดหนองแขม",students:1876},
+  {lat:13.70404,lng:100.3491,name:"โรงเรียนวัดอุดมรังสี",students:2136},
+  {lat:13.6868,lng:100.3638,name:"โรงเรียนประชาบำรุง",students:1155},
+  {lat:13.72189,lng:100.343,name:"โรงเรียนบ้านขุนประเทศ",students:1541},
+  {lat:13.72618,lng:100.3595,name:"โรงเรียนมนต์จรัสสิงห์อนุสรณ์",students:309},
+  {lat:13.65699,lng:100.3439,name:"โรงเรียนวัดศรีนวลธรรมวิมล",students:1313},
+  {lat:13.7131,lng:100.6038,name:"โรงเรียนวัดใต้",students:376},
+  {lat:13.73074,lng:100.6132,name:"โรงเรียนนาคนาวาอุปถัมภ์",students:1062},
+  {lat:13.71376,lng:100.6306,name:"โรงเรียนวัดปากบ่อ",students:1139},
+  {lat:13.71633,lng:100.6393,name:"โรงเรียนสุเหร่าใหม่ (สวนหลวง)",students:454},
+  {lat:13.73765,lng:100.6435,name:"โรงเรียนหัวหมาก",students:251},
+  {lat:13.73318,lng:100.6405,name:"โรงเรียนคลองกลันตัน",students:491},
+  {lat:13.71203,lng:100.6225,name:"โรงเรียนวัดทองใน",students:113},
+  {lat:13.77786,lng:100.5695,name:"โรงเรียนสามเสนนอก",students:3019},
+  {lat:13.76809,lng:100.5563,name:"โรงเรียนวิชูทิศ",students:1027},
+  {lat:13.76797,lng:100.5552,name:"โรงเรียนวิชากร",students:1019},
+  {lat:13.88923,lng:100.5825,name:"โรงเรียนวัดหลักสี่",students:407},
+  {lat:13.88534,lng:100.5604,name:"โรงเรียนทุ่งสองห้อง",students:490},
+  {lat:13.901,lng:100.5832,name:"โรงเรียนเคหะทุ่งสองห้อง 1",students:975},
+  {lat:13.90228,lng:100.5786,name:"โรงเรียนเคหะทุ่งสองห้อง 2",students:423},
+  {lat:13.87341,lng:100.5533,name:"โรงเรียนการเคหะท่าทราย",students:848},
+  {lat:13.86082,lng:100.5671,name:"โรงเรียนบางเขน",students:406},
+  {lat:13.92954,lng:100.6597,name:"โรงเรียนสายไหม",students:2042},
+  {lat:13.90813,lng:100.6339,name:"โรงเรียนวัดเกาะสุวรรณาราม",students:1463},
+  {lat:13.90394,lng:100.665,name:"โรงเรียนออเงิน",students:351},
+  {lat:13.91842,lng:100.6865,name:"โรงเรียนวัดหนองใหญ่",students:1382},
+  {lat:13.91371,lng:100.625,name:"โรงเรียนฤทธิยะวรรณาลัย",students:4593},
+  {lat:13.91897,lng:100.636,name:"โรงเรียนประชานุกูล",students:365},
+  {lat:13.88508,lng:100.6622,name:"โรงเรียนพรพระร่วงประสิทธิ์",students:290},
+  {lat:13.88593,lng:100.625,name:"โรงเรียนวัดราษฎร์นิยมธรรม",students:917},
+  {lat:13.93542,lng:100.6388,name:"โรงเรียนซอยแอนเนกซ์",students:928},
+  {lat:13.74365,lng:100.6996,name:"โรงเรียนสุเหร่าทับช้างคลองบน",students:320},
+  {lat:13.75835,lng:100.6965,name:"โรงเรียนวัดลาดบัวขาว",students:432},
+  {lat:13.74031,lng:100.6923,name:"โรงเรียนสมโภชกรุงอนุสรณ์",students:1165},
+  {lat:13.76915,lng:100.6948,name:"โรงเรียนสุเหร่าซีรอ",students:786},
+  {lat:13.76987,lng:100.7135,name:"โรงเรียนสุเหร่าลาดบัวขาว",students:547},
+  {lat:13.78035,lng:100.7017,name:"โรงเรียนสามแยกคลองหลอแหล",students:487},
+  {lat:13.84853,lng:100.6596,name:"โรงเรียนจินดาบำรุง",students:1003},
+  {lat:13.79322,lng:100.6948,name:"โรงเรียนคันนายาว",students:925},
+  {lat:13.77158,lng:100.5941,name:"โรงเรียนสุเหร่าลาดพร้าว",students:127},
+  {lat:13.78077,lng:100.6126,name:"โรงเรียนสุเหร่าดอนสะแก",students:261},
+  {lat:13.78419,lng:100.6,name:"โรงเรียนวัดสามัคคีธรรม",students:452},
+  {lat:13.862,lng:100.6992,name:"โรงเรียนกลางคลองสอง",students:333},
+  {lat:13.81789,lng:100.6977,name:"โรงเรียนบางชัน",students:3191},
+  {lat:13.87649,lng:100.7835,name:"โรงเรียนบ้านแบนชะโด",students:150},
+  {lat:13.90131,lng:100.6907,name:"โรงเรียนบ้านหนองระแหง",students:253},
+  {lat:13.84407,lng:100.6957,name:"โรงเรียนประชาราษฎร์อุปถัมภ์วิทยา",students:1134},
+  {lat:13.85422,lng:100.6732,name:"โรงเรียนวัดคู้บอน",students:1746},
+  {lat:13.85082,lng:100.7314,name:"โรงเรียนวัดบัวแก้ว",students:694},
+  {lat:13.88564,lng:100.7086,name:"โรงเรียนวัดแป้นทอง",students:1089},
+  {lat:13.8739,lng:100.6864,name:"โรงเรียนวัดพระยาสุเรนทร์",students:883},
+  {lat:13.91749,lng:100.7533,name:"โรงเรียนวัดลำกระดาน",students:412},
+  {lat:13.91863,lng:100.7917,name:"โรงเรียนวัดศรีสุก",students:324},
+  {lat:13.87188,lng:100.7738,name:"โรงเรียนวัดสุขใจ",students:178},
+  {lat:13.87746,lng:100.7322,name:"โรงเรียนวัดสุทธิสะอาด",students:690},
+];
+
+const catColor = {
+  "ต่ำกว่า 3 แสน": "#4FCC4B",
+  "ต่ำกว่า 5 แสน": "#f97316",
+  "ต่ำกว่า 1 ล้าน": "#2563eb"
+};
+
+let map;
+let layers = { npl: null, school: null, district: null, sam: null };
+let visible = { npl: true, school: true, district: true, sam: true };
+
+function getRadius(count) { return Math.max(12, Math.sqrt(count) * 5); }
+function getOpacity(count) {
+  if (count >= 50) return 0.95;
+  if (count >= 20) return 0.80;
+  if (count >= 10) return 0.65;
+  return 0.50;
+}
+function fmtNum(n) { return n.toLocaleString('th-TH'); }
+
+function initMap() {
+  map = L.map('map', { center: [13.75, 100.58], zoom: 10 });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 50
+  }).addTo(map);
+
+  // NPL layer
+  layers.npl = L.layerGroup();
+  nplData.forEach(d => {
+    const circle = L.circleMarker([d.lat, d.lng], {
+      radius: getRadius(d.count),
+      fillColor: catColor[d.cat] || "#888",
+      color: "#fff",
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 0.70
+    });
+    const bc = catColor[d.cat] || "#888";
+    circle.bindPopup(`
+      <div class="popup-title">🏢 ${d.name}</div>
+      <div class="popup-badge" style="background:${bc}20;color:${bc};border:1px solid ${bc}40">${d.cat}</div>
+      <div class="popup-row">จำนวนทรัพย์: <b>${fmtNum(d.count)} รายการ</b></div>
+      <div class="popup-row">รวมราคาตั้งขาย: <b>${fmtNum(d.total)} บาท</b></div>
+      <div class="popup-row">ราคาเฉลี่ย: <b>${fmtNum(d.avg)} บาท</b></div>
+    `);
+    layers.npl.addLayer(circle);
+  });
+
+  // School layer
+  const schoolIcon = L.divIcon({
+    html: '<div style="width:11px;height:11px;border-radius:50%;background:#059669;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3)"></div>',
+    iconSize: [11,11], iconAnchor: [5,5], className: ''
+  });
+  layers.school = L.layerGroup();
+  schoolData.forEach(s => {
+    const m = L.marker([s.lat, s.lng], { icon: schoolIcon });
+    m.bindPopup(`
+      <div class="popup-title">🏫 ${s.name}</div>
+      <div class="popup-row">นักเรียน: <b>${fmtNum(s.students)} คน</b></div>
+    `);
+    layers.school.addLayer(m);
+  });
+
+  // District layer — label badge
+  layers.district = L.layerGroup();
+  districtData.forEach(d => {
+    const icon = L.divIcon({
+    html: `<div style="width:11px;height:11px;font-size:13px;line-height:11px;text-align:center;color:#7c3aed;-webkit-text-stroke:2.5px #fff;paint-order:stroke fill;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));">★</div>`,
+    iconSize: [11, 11], iconAnchor: [5, 5], className: ''
+  });
+    const m = L.marker([d.lat, d.lng], { icon });
+    m.bindPopup(`
+      <div class="popup-title">🏛️ ${d.name}</div>
+      <div class="popup-row" style="margin-top:4px">${d.address}</div>
+      <div class="popup-row" style="margin-top:4px">โทร: <b>${d.tel}</b></div>
+    `);
+    layers.district.addLayer(m);
+  });
+
+  // SAM layer
+  layers.sam = L.layerGroup();
+  samData.forEach(d => {
+    const circle = L.circleMarker([d.lat, d.lng], {
+      radius: getRadius(d.count),
+      fillColor: "#0891b2",
+      color: "#fff",
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 0.70
+    });
+    circle.bindPopup(`
+      <div class="popup-title">💎 ${d.name}</div>
+      <div class="popup-badge" style="background:#0891b220;color:#0891b2;border:1px solid #0891b240">SAM Asset</div>
+      <div class="popup-row">จำนวนทรัพย์: <b>${fmtNum(d.count)} รายการ</b></div>
+      <div class="popup-row">รวมราคาตั้งขาย: <b>${fmtNum(d.total)} บาท</b></div>
+      <div class="popup-row">รายละเอียด: <b>${d.data}</b></div>
+    `);
+    layers.sam.addLayer(circle);
+  });
+
+  layers.npl.addTo(map);
+  layers.school.addTo(map);
+  layers.district.addTo(map);
+  layers.sam.addTo(map);
+}
+
+function toggleLayer(name) {
+  visible[name] = !visible[name];
+  const btn = document.getElementById('btn-' + name);
+  if (visible[name]) {
+    layers[name].addTo(map);
+    btn.classList.add('active');
+  } else {
+    map.removeLayer(layers[name]);
+    btn.classList.remove('active');
+  }
+}
+
+window.addEventListener('DOMContentLoaded', initMap);
+</script>
+</body>
+</html>
