@@ -1215,10 +1215,10 @@ function initMap() {
   demandMarkers = L.layerGroup();
   demandData.forEach(d => {
     const intensity = d.demand / 50;
-    const color = intensity >= 0.85 ? '#ef4444'
-                : intensity >= 0.70 ? '#f97316'
-                : intensity >= 0.50 ? '#facc15'
-                : intensity >= 0.30 ? '#4ade80'
+    const color = intensity >= 0.8 ? '#ef4444'
+                : intensity >= 0.6 ? '#f97316'
+                : intensity >= 0.4 ? '#facc15'
+                : intensity >= 0.2 ? '#4ade80'
                 : '#22d3ee';
     const circle = L.circleMarker([d.lat, d.lng], {
       radius: 4,
