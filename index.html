@@ -1197,15 +1197,15 @@ function initMap() {
   const heatPoints = demandData.map(d => [d.lat, d.lng, d.demand]);
   heatLayer = L.heatLayer(heatPoints, {
     radius: 35,
-    blur: 25,
+    blur: 50,
     maxZoom: 13,
     max: 50,
     gradient: {
       0.0: '#3b82f6',
-      0.3: '#22d3ee',
-      0.5: '#4ade80',
-      0.7: '#facc15',
-      0.85: '#f97316',
+      0.2: '#22d3ee',
+      0.4: '#4ade80',
+      0.6: '#facc15',
+      0.8: '#f97316',
       1.0: '#ef4444'
     }
   });
