@@ -813,17 +813,16 @@ function initMap() {
   // School layer
   const schoolIcon = L.divIcon({
     html: '<div style="width:11px;height:11px;border-radius:50%;background:#059669;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3)"></div>',
-    iconSize: [11,11], iconAnchor: [5,5], className: ''
+    iconSize: [8,8], iconAnchor: [3,3], className: ''
   });
   layers.school = L.layerGroup();
   schoolData.forEach(s => {
     const m = L.marker([s.lat, s.lng], { icon: schoolIcon });
     m.bindPopup(`
       <div class="popup-title">🏫 ${s.name}</div>
-      <div class="popup-row">นักเรียน: <b>${fmtNum(s.students)} คน</b></div>
       <div class="popup-row">เขต: <b>${s.district}</b></div>
-      <div class="popup-row">นักเรียน: <b>${fmtNum(s.students)} คน</b></div>
       <div class="popup-row">ครู: <b>${fmtNum(s.teachers)} คน</b></div>
+      <div class="popup-row">นักเรียน: <b>${fmtNum(s.students)} คน</b></div>
       <div class="popup-row">โทร: <b>${s.tel}</b></div>
     `);
     layers.school.addLayer(m);
@@ -834,7 +833,7 @@ function initMap() {
   districtData.forEach(d => {
     const icon = L.divIcon({
     html: `<div style="width:11px;height:11px;font-size:13px;line-height:11px;text-align:center;color:#7c3aed;-webkit-text-stroke:2.5px #fff;paint-order:stroke fill;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));">★</div>`,
-    iconSize: [11, 11], iconAnchor: [5, 5], className: ''
+    iconSize: [8, 8], iconAnchor: [3, 3], className: ''
   });
     const m = L.marker([d.lat, d.lng], { icon });
     m.bindPopup(`
