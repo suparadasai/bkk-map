@@ -1196,8 +1196,8 @@ function initMap() {
   // Housing Demand Heatmap + clickable markers
   const heatPoints = demandData.map(d => [d.lat, d.lng, d.demand]);
   heatLayer = L.heatLayer(heatPoints, {
-    radius: 20,
-    blur: 10,
+    radius: 35,
+    blur: 20,
     maxZoom: 13,
     max: 50,
     gradient: {
