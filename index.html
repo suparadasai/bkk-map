@@ -58,6 +58,7 @@
   .ctrl-btn.active.school { background: #059669; }
   .ctrl-btn.active.district { background: #7c3aed; }
   .ctrl-btn.active.sam { background: #0891b2; }
+  .ctrl-btn.active.demand { background: #f43f5e; }
   .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 
   .layout { display: flex; height: calc(100vh - 120px); }
@@ -156,6 +157,9 @@
   <button class="ctrl-btn sam active" id="btn-sam" onclick="toggleLayer('sam')">
     <span class="dot" style="background:#0891b2"></span> SAM Asset
   </button>
+  <button class="ctrl-btn demand active" id="btn-demand" onclick="toggleLayer('demand')">
+    <span class="dot" style="background:#f43f5e"></span> Housing Demand
+  </button>
 </div>
 
 <div class="layout">
@@ -181,7 +185,7 @@
     </div>
 
     <div class="legend-section">
-      <h3> BAM — ขนาดตามจำนวนทรัพย์</h3>
+      <h3>BAM Asset — ขนาดตามจำนวนทรัพย์</h3>
       <div class="legend-row">
         <div class="legend-bubble" style="width:22px;height:22px;background:#4FCC4B"></div>
         <span>ต่ำกว่า 3 แสนบาท</span>
@@ -207,6 +211,15 @@
     </div>
 
     <div class="legend-section">
+      <div class="legend-section">
+        <h3>Housing Demand</h3>
+        <div style="height:12px;width:100%;border-radius:6px;background:linear-gradient(to right,#3b82f6,#22d3ee,#4ade80,#facc15,#f97316,#ef4444);margin-bottom:6px;"></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#64748b;">
+          <span>น้อย (1)</span><span>มาก (50)</span>
+        </div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:6px;">● ความเข้ม = จำนวนความต้องการที่อยู่อาศัย</div>
+      </div>
+ 
       <h3>เลเยอร์อื่น</h3>
       <div class="legend-row">
         <div style="width:12px;height:12px;border-radius:50%;background:#059669;border:2px solid #fff;box-shadow:0 0 0 1px #059669;flex-shrink:0"></div>
@@ -231,6 +244,7 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script>
 const nplData = [
   {"lat": 13.917473, "lng": 100.573106, "name": "โครงการเคหะดอนเมือง", "count": 58, "total": 13510000, "avg": 232931.0, "cat": "ต่ำกว่า 3 แสน"}, 
@@ -762,6 +776,318 @@ const schoolData = [
   {lat:13.68202,lng:100.436,name:"โรงเรียนคงโครัดอุทิศ",students:763,teachers:37,district:"บางบอน",tel:"0 2415 5906"},
 ];
 
+const demandData = [
+  {lat:13.85511,lng:100.8286,name:"โรงเรียนบ้านเจียรดับ",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:29},
+  {lat:13.8635,lng:100.8542,name:"โรงเรียนหนองจอกพิทยานุสรณ์",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:26},
+  {lat:13.85712,lng:100.8603,name:"โรงเรียนวัดหนองจอก (ภักดีนรเศรษฐ)",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:19},
+  {lat:13.78658,lng:100.8589,name:"โรงเรียนคารีอุปถัมภ์",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:15},
+  {lat:13.83536,lng:100.9105,name:"โรงเรียนนีลราษฎร์อุปถัมภ์",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:12},
+  {lat:13.8042,lng:100.8597,name:"โรงเรียนสุเหร่าลำแขก",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:10},
+  {lat:13.90471,lng:100.8899,name:"โรงเรียนวัดแสนเกษม",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:9},
+  {lat:13.83225,lng:100.8413,name:"โรงเรียนอิสลามลำไทร",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:6},
+  {lat:13.79168,lng:100.8355,name:"โรงเรียนลำผักชี",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:6},
+  {lat:13.82618,lng:100.8161,name:"โรงเรียนสุเหร่านาตับ",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:6},
+  {lat:13.81891,lng:100.8505,name:"โรงเรียนบ้านลำต้นกล้วย",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:5},
+  {lat:13.91294,lng:100.839,name:"โรงเรียนสุเหร่าคลองสิบเอ็ด",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:5},
+  {lat:13.80239,lng:100.8884,name:"โรงเรียนคลองสอง",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:5},
+  {lat:13.75548,lng:100.8887,name:"โรงเรียนวัดลำต้อยติ่ง",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:4},
+  {lat:13.81108,lng:100.8782,name:"โรงเรียนวัดราษฎร์บำรุง",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:4},
+  {lat:13.88903,lng:100.8075,name:"โรงเรียนวัดสามง่าม",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:4},
+  {lat:13.85032,lng:100.8972,name:"โรงเรียนสุเหร่าศาลาแดง",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:4},
+  {lat:13.80368,lng:100.8459,name:"โรงเรียนศิริวังวิทยาคาร",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:4},
+  {lat:13.85529,lng:100.8694,name:"โรงเรียนสุเหร่าหะยีมินา",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:4},
+  {lat:13.84792,lng:100.8909,name:"โรงเรียนสามแยกท่าไข่",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:3},
+  {lat:13.77995,lng:100.8711,name:"โรงเรียนวัดใหม่กระทุ่มล้ม",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:3},
+  {lat:13.79168,lng:100.8128,name:"โรงเรียนวัดอู่ตะเภา",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:3},
+  {lat:13.88799,lng:100.8495,name:"โรงเรียนลำบุหรี่พวง",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:2},
+  {lat:13.71633,lng:100.6393,name:"โรงเรียนสุเหร่าใหม่",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:2},
+  {lat:13.90414,lng:100.8121,name:"โรงเรียนสุเหร่าคลองสิบ",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:2},
+  {lat:13.81578,lng:100.9352,name:"โรงเรียนหลวงแพ่ง (บำรุงรัฐกิจ)",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:2},
+  {lat:13.88736,lng:100.9061,name:"โรงเรียนวัดใหม่เจริญราษฎร์",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:1},
+  {lat:13.91373,lng:100.863,name:"โรงเรียนวัดพระยาปลา",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:1},
+  {lat:13.89513,lng:100.8286,name:"โรงเรียนสุเหร่าสนามกลางลำ",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:1},
+  {lat:13.878,lng:100.82,name:"โรงเรียนลำเจดีย์",district:"หนองจอก",zone:"กรุงเทพตะวันออก",demand:1},
+  {lat:13.85422,lng:100.6732,name:"โรงเรียนวัดคู้บอน (วัฒนานันท์อุทิศ)",district:"คลองสามวา",zone:"กรุงเทพตะวันออก",demand:22},
+  {lat:13.88564,lng:100.7086,name:"โรงเรียนวัดแป้นทอง (สามวาวิทยา)",district:"คลองสามวา",zone:"กรุงเทพตะวันออก",demand:19},
+  {lat:13.8739,lng:100.6864,name:"โรงเรียนวัดพระยาสุเรนทร์ (บุญมีอนุกูล)",district:"คลองสามวา",zone:"กรุงเทพตะวันออก",demand:10},
+  {lat:13.84407,lng:100.6957,name:"โรงเรียนประชาราษฎร์อุปถัมภ์วิทยา",district:"คลองสามวา",zone:"กรุงเทพตะวันออก",demand:10},
+  {lat:13.85535,lng:100.7859,name:"โรงเรียนสุเหร่าเกาะขุนเณร",district:"คลองสามวา",zone:"กรุงเทพตะวันออก",demand:10},
+  {lat:13.85082,lng:100.7314,name:"โรงเรียนวัดบัวแก้ว",district:"คลองสามวา",zone:"กรุงเทพตะวันออก",demand:9},
+  {lat:13.82564,lng:100.7515,name:"โรงเรียนสุเหร่าแสนแสบ",district:"คลองสามวา",zone:"กรุงเทพตะวันออก",demand:6},
+  {lat:13.87746,lng:100.7322,name:"โรงเรียนวัดสุทธิสะอาด",district:"คลองสามวา",zone:"กรุงเทพตะวันออก",demand:5},
+  {lat:13.91863,lng:100.7917,name:"โรงเรียนวัดศรีสุก (แย้มเยื้อนอุปถัมภ์)",district:"คลองสามวา",zone:"กรุงเทพตะวันออก",demand:3},
+  {lat:13.84241,lng:100.7105,name:"โรงเรียนสุเหร่าคลองหนึ่ง (มานะราษฎร์บำรุง)",district:"คลองสามวา",zone:"กรุงเทพตะวันออก",demand:3},
+  {lat:13.81789,lng:100.6977,name:"โรงเรียนบางชัน (ปลื้มวิทยานุสรณ์)",district:"คลองสามวา",zone:"กรุงเทพตะวันออก",demand:2},
+  {lat:13.91266,lng:100.7701,name:"โรงเรียนสุเหร่าคลองสี่",district:"คลองสามวา",zone:"กรุงเทพตะวันออก",demand:2},
+  {lat:13.862,lng:100.6992,name:"โรงเรียนกลางคลองสอง (พร ดีเจริญ)",district:"คลองสามวา",zone:"กรุงเทพตะวันออก",demand:1},
+  {lat:13.76679,lng:100.6525,name:"โรงเรียนวัดศรีบุญเรือง",district:"บางกะปิ",zone:"กรุงเทพตะวันออก",demand:5},
+  {lat:13.76424,lng:100.6365,name:"โรงเรียนไขศรีปราโมชอนุสรณ์",district:"บางกะปิ",zone:"กรุงเทพตะวันออก",demand:3},
+  {lat:13.77177,lng:100.6469,name:"โรงเรียนมัธยมบ้านบางกะปิ",district:"บางกะปิ",zone:"กรุงเทพตะวันออก",demand:3},
+  {lat:13.75829,lng:100.6569,name:"โรงเรียนสุเหร่าหัวหมากน้อย",district:"บางกะปิ",zone:"กรุงเทพตะวันออก",demand:2},
+  {lat:13.74923,lng:100.6742,name:"โรงเรียนสุเหร่าวังใหญ่",district:"บางกะปิ",zone:"กรุงเทพตะวันออก",demand:1},
+  {lat:13.72545,lng:100.72,name:"โรงเรียนวัดลานบุญ",district:"ลาดกระบัง",zone:"กรุงเทพตะวันออก",demand:25},
+  {lat:13.74165,lng:100.8527,name:"โรงเรียนขุมทอง (เพชรทองคำอุปถัมภ์)",district:"ลาดกระบัง",zone:"กรุงเทพตะวันออก",demand:11},
+  {lat:13.78047,lng:100.8014,name:"โรงเรียนวัดทิพพาวาส",district:"ลาดกระบัง",zone:"กรุงเทพตะวันออก",demand:10},
+  {lat:13.76573,lng:100.7304,name:"โรงเรียนเคหะชุมชนลาดกระบัง",district:"ลาดกระบัง",zone:"กรุงเทพตะวันออก",demand:19},
+  {lat:13.74824,lng:100.7244,name:"โรงเรียนแดงเป้า (สิงสุขบูรณะ)",district:"ลาดกระบัง",zone:"กรุงเทพตะวันออก",demand:5},
+  {lat:13.72308,lng:100.7981,name:"โรงเรียนวัดพลมานีย์",district:"ลาดกระบัง",zone:"กรุงเทพตะวันออก",demand:5},
+  {lat:13.77684,lng:100.7381,name:"โรงเรียนวัดปากบึง",district:"ลาดกระบัง",zone:"กรุงเทพตะวันออก",demand:3},
+  {lat:13.72636,lng:100.7377,name:"โรงเรียนวัดสังฆราชา",district:"ลาดกระบัง",zone:"กรุงเทพตะวันออก",demand:2},
+  {lat:13.76519,lng:100.7767,name:"โรงเรียนวัดบึงบัว",district:"ลาดกระบัง",zone:"กรุงเทพตะวันออก",demand:2},
+  {lat:13.72732,lng:100.7683,name:"โรงเรียนวัดปลูกศรัทธา",district:"ลาดกระบัง",zone:"กรุงเทพตะวันออก",demand:2},
+  {lat:13.7128,lng:100.813,name:"โรงเรียนแสงหิรัญวิทยา",district:"ลาดกระบัง",zone:"กรุงเทพตะวันออก",demand:1},
+  {lat:13.74263,lng:100.7558,name:"โรงเรียนวัดบำรุงรื่น",district:"ลาดกระบัง",zone:"กรุงเทพตะวันออก",demand:1},
+  {lat:13.74025,lng:100.7954,name:"โรงเรียนวัดสุทธาโภชน์",district:"ลาดกระบัง",zone:"กรุงเทพตะวันออก",demand:1},
+  {lat:13.77546,lng:100.7244,name:"โรงเรียนสุเหร่าลำนายโส",district:"ลาดกระบัง",zone:"กรุงเทพตะวันออก",demand:1},
+  {lat:13.7092,lng:100.662,name:"โรงเรียนมัธยมสุวิทย์เสรีอนุสรณ์",district:"ประเวศ",zone:"กรุงเทพตะวันออก",demand:24},
+  {lat:13.68101,lng:100.6984,name:"โรงเรียนคลองปักหลัก",district:"ประเวศ",zone:"กรุงเทพตะวันออก",demand:13},
+  {lat:13.69739,lng:100.6761,name:"โรงเรียนคลองมะขามเทศ",district:"ประเวศ",zone:"กรุงเทพตะวันออก",demand:6},
+  {lat:13.67665,lng:100.665,name:"โรงเรียนวัดตะกล่ำ",district:"ประเวศ",zone:"กรุงเทพตะวันออก",demand:6},
+  {lat:13.72268,lng:100.6888,name:"โรงเรียนวัดกระทุ่มเสือปลา",district:"ประเวศ",zone:"กรุงเทพตะวันออก",demand:5},
+  {lat:13.71365,lng:100.6516,name:"โรงเรียนสุเหร่าบึงหนองบอน",district:"ประเวศ",zone:"กรุงเทพตะวันออก",demand:5},
+  {lat:13.69623,lng:100.6514,name:"โรงเรียนแก่นทองอุปถัมภ์",district:"ประเวศ",zone:"กรุงเทพตะวันออก",demand:3},
+  {lat:13.69252,lng:100.6801,name:"โรงเรียนคชเผือกอนุสรณ์",district:"ประเวศ",zone:"กรุงเทพตะวันออก",demand:2},
+  {lat:13.69123,lng:100.6384,name:"โรงเรียนอยู่เป็นสุขอนุสรณ์",district:"ประเวศ",zone:"กรุงเทพตะวันออก",demand:2},
+  {lat:13.72452,lng:100.6735,name:"โรงเรียนสุเหร่าทางควาย",district:"ประเวศ",zone:"กรุงเทพตะวันออก",demand:2},
+  {lat:13.70929,lng:100.6619,name:"โรงเรียนสุวิทย์เสรีอนุสรณ์",district:"ประเวศ",zone:"กรุงเทพตะวันออก",demand:2},
+  {lat:13.7105,lng:100.6676,name:"โรงเรียนสุเหร่าศาลาลอย",district:"ประเวศ",zone:"กรุงเทพตะวันออก",demand:1},
+  {lat:13.73571,lng:100.671,name:"โรงเรียนสุเหร่าบ้านม้า",district:"ประเวศ",zone:"กรุงเทพตะวันออก",demand:1},
+  {lat:13.83442,lng:100.7733,name:"โรงเรียนสุเหร่าทรายกองดิน",district:"มีนบุรี",zone:"กรุงเทพตะวันออก",demand:17},
+  {lat:13.80306,lng:100.7574,name:"โรงเรียนบึงขวาง (มหาดไทยอุปถัมภ์)",district:"มีนบุรี",zone:"กรุงเทพตะวันออก",demand:13},
+  {lat:13.79217,lng:100.7356,name:"โรงเรียนคลองสองต้นนุ่น",district:"มีนบุรี",zone:"กรุงเทพตะวันออก",demand:8},
+  {lat:13.813,lng:100.7313,name:"โรงเรียนมีนบุรี",district:"มีนบุรี",zone:"กรุงเทพตะวันออก",demand:7},
+  {lat:13.79222,lng:100.751,name:"โรงเรียนคลองสาม",district:"มีนบุรี",zone:"กรุงเทพตะวันออก",demand:6},
+  {lat:13.80094,lng:100.7867,name:"โรงเรียนวัดทองสัมฤทธิ์",district:"มีนบุรี",zone:"กรุงเทพตะวันออก",demand:4},
+  {lat:13.80785,lng:100.8071,name:"โรงเรียนวัดใหม่ลำนกแขวก",district:"มีนบุรี",zone:"กรุงเทพตะวันออก",demand:3},
+  {lat:13.81948,lng:100.7418,name:"โรงเรียนวัดแสนสุข",district:"มีนบุรี",zone:"กรุงเทพตะวันออก",demand:3},
+  {lat:13.84521,lng:100.7955,name:"โรงเรียนศาลาคู้",district:"มีนบุรี",zone:"กรุงเทพตะวันออก",demand:1},
+  {lat:13.804,lng:100.7019,name:"โรงเรียนสุเหร่าบางชัน",district:"มีนบุรี",zone:"กรุงเทพตะวันออก",demand:1},
+  {lat:13.80338,lng:100.6492,name:"โรงเรียนวัดบางเตย",district:"บึงกุ่ม",zone:"กรุงเทพตะวันออก",demand:17},
+  {lat:13.77303,lng:100.6586,name:"โรงเรียนวัดพิชัย",district:"บึงกุ่ม",zone:"กรุงเทพตะวันออก",demand:16},
+  {lat:13.77333,lng:100.6565,name:"โรงเรียนพิชัยพัฒนา",district:"บึงกุ่ม",zone:"กรุงเทพตะวันออก",demand:11},
+  {lat:13.80417,lng:100.6623,name:"โรงเรียนประภาสวิทยา",district:"บึงกุ่ม",zone:"กรุงเทพตะวันออก",demand:3},
+  {lat:13.78594,lng:100.6737,name:"โรงเรียนคลองกุ่ม (เสรีไทย อนุสรณ์)",district:"บึงกุ่ม",zone:"กรุงเทพตะวันออก",demand:1},
+  {lat:13.8326,lng:100.6524,name:"โรงเรียนแย้มจาดวิชชานุสรณ์",district:"บึงกุ่ม",zone:"กรุงเทพตะวันออก",demand:1},
+  {lat:13.78035,lng:100.7017,name:"โรงเรียนสามแยกคลองหลอแหล",district:"สะพานสูง",zone:"กรุงเทพตะวันออก",demand:10},
+  {lat:13.76987,lng:100.7135,name:"โรงเรียนสุเหร่าลาดบัวขาว",district:"สะพานสูง",zone:"กรุงเทพตะวันออก",demand:2},
+  {lat:13.70079,lng:100.4972,name:"โรงเรียนวัดลาดบัวขาว",district:"สะพานสูง",zone:"กรุงเทพตะวันออก",demand:12},
+  {lat:13.74365,lng:100.6996,name:"โรงเรียนสุเหร่าทับช้างคลองบน",district:"สะพานสูง",zone:"กรุงเทพตะวันออก",demand:1},
+  {lat:13.84853,lng:100.6596,name:"โรงเรียนจินดาบำรุง",district:"คันนายาว",zone:"กรุงเทพตะวันออก",demand:15},
+  {lat:13.79322,lng:100.6948,name:"โรงเรียนคันนายาว (ธารินเจริญสงเคราะห์)",district:"คันนายาว",zone:"กรุงเทพตะวันออก",demand:7},
+  {lat:13.77578,lng:100.5836,name:"โรงเรียนประชาราษฎร์บำเพ็ญ",district:"ห้วยขวาง",zone:"กรุุงเทพกลาง",demand:71},
+  {lat:13.74914,lng:100.5717,name:"โรงเรียนวัดใหม่ช่องลม",district:"ห้วยขวาง",zone:"กรุุงเทพกลาง",demand:5},
+  {lat:13.76809,lng:100.5563,name:"โรงเรียนวิชูทิศ",district:"ดินแดง",zone:"กรุุงเทพกลาง",demand:53},
+  {lat:13.76797,lng:100.5552,name:"โรงเรียนวิชากร",district:"ดินแดง",zone:"กรุุงเทพกลาง",demand:5},
+  {lat:13.78115,lng:100.4792,name:"โรงเรียนวัดใหม่อมตรส",district:"พระนคร",zone:"กรุุงเทพกลาง",demand:10},
+  {lat:13.74895,lng:100.5013,name:"โรงเรียนวัดสุทัศน์",district:"พระนคร",zone:"กรุุงเทพกลาง",demand:8},
+  {lat:13.76148,lng:100.5033,name:"โรงเรียนวัดตรีทศเทพ",district:"พระนคร",zone:"กรุุงเทพกลาง",demand:7},
+  {lat:13.75566,lng:100.4911,name:"โรงเรียนวัดมหาธาตุ",district:"พระนคร",zone:"กรุุงเทพกลาง",demand:7},
+  {lat:13.74627,lng:100.4926,name:"โรงเรียนวัดพระเชตุพน",district:"พระนคร",zone:"กรุุงเทพกลาง",demand:6},
+  {lat:13.76685,lng:100.5023,name:"โรงเรียนวัดอินทรวิหาร",district:"พระนคร",zone:"กรุุงเทพกลาง",demand:5},
+  {lat:13.75545,lng:100.5038,name:"โรงเรียนวัดราชนัดดา",district:"พระนคร",zone:"กรุุงเทพกลาง",demand:3},
+  {lat:13.74976,lng:100.4996,name:"โรงเรียนราชบพิธ",district:"พระนคร",zone:"กรุุงเทพกลาง",demand:2},
+  {lat:13.74872,lng:100.5518,name:"โรงเรียนวัดดิสหงสาราม",district:"ราชเทวี",zone:"กรุุงเทพกลาง",demand:19},
+  {lat:13.75153,lng:100.5263,name:"โรงเรียนกิ่งเพชร",district:"ราชเทวี",zone:"กรุุงเทพกลาง",demand:10},
+  {lat:13.75233,lng:100.522,name:"โรงเรียนวัดพระยายัง",district:"ราชเทวี",zone:"กรุุงเทพกลาง",demand:7},
+  {lat:13.78077,lng:100.6126,name:"โรงเรียนสุเหร่าดอนสะแก",district:"วังทองหลาง",zone:"กรุุงเทพกลาง",demand:19},
+  {lat:13.79629,lng:100.5483,name:"โรงเรียนวัดไผ่ตัน",district:"พญาไท",zone:"กรุุงเทพกลาง",demand:34},
+  {lat:13.78057,lng:100.5046,name:"โรงเรียนวัดราชผาติการาม",district:"ดุสิต",zone:"กรุุงเทพกลาง",demand:9},
+  {lat:13.79878,lng:100.5331,name:"โรงเรียนวัดธรรมาภิรตาราม",district:"ดุสิต",zone:"กรุุงเทพกลาง",demand:2},
+  {lat:13.77627,lng:100.5222,name:"โรงเรียนสุโขทัย",district:"ดุสิต",zone:"กรุุงเทพกลาง",demand:1},
+  {lat:13.74899,lng:100.5081,name:"โรงเรียนวัดดิสานุการาม",district:"ป้อมปราบศัตรูพ่าย",zone:"กรุุงเทพกลาง",demand:1},
+  {lat:13.74758,lng:100.5056,name:"โรงเรียนวัดพระพิเรนทร์",district:"ป้อมปราบศัตรูพ่าย",zone:"กรุุงเทพกลาง",demand:5},
+  {lat:13.7552,lng:100.51,name:"โรงเรียนวัดสิตาราม",district:"ป้อมปราบศัตรูพ่าย",zone:"กรุุงเทพกลาง",demand:2},
+  {lat:13.90813,lng:100.6339,name:"โรงเรียนวัดเกาะสุวรรณาราม",district:"สายไหม",zone:"กรุงเทพเหนือ",demand:63},
+  {lat:13.91371,lng:100.625,name:"โรงเรียนฤทธิยะวรรณาลัย",district:"สายไหม",zone:"กรุงเทพเหนือ",demand:46},
+  {lat:13.88593,lng:100.625,name:"โรงเรียนวัดราษฎร์นิยมธรรม (พิบูลสงคราม)",district:"สายไหม",zone:"กรุงเทพเหนือ",demand:45},
+  {lat:13.92954,lng:100.6597,name:"โรงเรียนสายไหม (ทัสนารมย์อนุสรณ์)",district:"สายไหม",zone:"กรุงเทพเหนือ",demand:15},
+  {lat:13.91842,lng:100.6865,name:"โรงเรียนวัดหนองใหญ่",district:"สายไหม",zone:"กรุงเทพเหนือ",demand:12},
+  {lat:13.91897,lng:100.636,name:"โรงเรียนประชานุกูล (ขำสนิทอนุเคราะห์)",district:"สายไหม",zone:"กรุงเทพเหนือ",demand:1},
+  {lat:13.88508,lng:100.6622,name:"โรงเรียนพรพระร่วงประสิทธิ์",district:"สายไหม",zone:"กรุงเทพเหนือ",demand:1},
+  {lat:13.84372,lng:100.5466,name:"โรงเรียนมัธยมประชานิเวศน์",district:"จตุจักร",zone:"กรุงเทพเหนือ",demand:15},
+  {lat:13.80457,lng:100.5878,name:"โรงเรียนบ้านลาดพร้าว",district:"จตุจักร",zone:"กรุงเทพเหนือ",demand:14},
+  {lat:13.84043,lng:100.5563,name:"โรงเรียนวัดเสมียนนารี",district:"จตุจักร",zone:"กรุงเทพเหนือ",demand:10},
+  {lat:13.83175,lng:100.5884,name:"โรงเรียนเสนานิคม",district:"จตุจักร",zone:"กรุงเทพเหนือ",demand:9},
+  {lat:13.84691,lng:100.5486,name:"โรงเรียนรัตนโกสินทร์สมโภช (ราชทัณฑ์อุปถัมภ์)",district:"จตุจักร",zone:"กรุงเทพเหนือ",demand:9},
+  {lat:13.85389,lng:100.5621,name:"โรงเรียนวัดเทวสุนทร",district:"จตุจักร",zone:"กรุงเทพเหนือ",demand:1},
+  {lat:13.80315,lng:100.5902,name:"โรงเรียนวัดลาดพร้าว",district:"ลาดพร้าว",zone:"กรุงเทพเหนือ",demand:20},
+  {lat:13.80032,lng:100.6128,name:"โรงเรียนคลองทรงกระเทียม",district:"ลาดพร้าว",zone:"กรุงเทพเหนือ",demand:19},
+  {lat:13.84739,lng:100.604,name:"โรงเรียนวัดลาดปลาเค้า",district:"ลาดพร้าว",zone:"กรุงเทพเหนือ",demand:1},
+  {lat:13.83221,lng:100.5909,name:"โรงเรียนเทพวิทยา",district:"ลาดพร้าว",zone:"กรุงเทพเหนือ",demand:1},
+  {lat:13.84032,lng:100.6324,name:"โรงเรียนลอยสายอนุสรณ์",district:"ลาดพร้าว",zone:"กรุงเทพเหนือ",demand:1},
+  {lat:13.92149,lng:100.6011,name:"โรงเรียนวัดดอนเมือง (ทหารอากาศอุทิศ)",district:"ดอนเมือง",zone:"กรุงเทพเหนือ",demand:14},
+  {lat:13.94951,lng:100.6154,name:"โรงเรียนพหลโยธิน (พ่วงเจริญอุปถัมภ์)",district:"ดอนเมือง",zone:"กรุงเทพเหนือ",demand:12},
+  {lat:13.92298,lng:100.5839,name:"โรงเรียนประชาอุทิศ (จันทาบอนุสรณ์)",district:"ดอนเมือง",zone:"กรุงเทพเหนือ",demand:5},
+  {lat:13.86082,lng:100.5671,name:"โรงเรียนบางเขน (ไว้สาลีอนุสรณ์)",district:"หลักสี่",zone:"กรุงเทพเหนือ",demand:14},
+  {lat:13.90228,lng:100.5786,name:"โรงเรียนเคหะทุ่งสองห้องวิทยา 2",district:"หลักสี่",zone:"กรุงเทพเหนือ",demand:12},
+  {lat:13.87341,lng:100.5533,name:"โรงเรียนการเคหะท่าทราย",district:"หลักสี่",zone:"กรุงเทพเหนือ",demand:1},
+  {lat:13.88534,lng:100.5604,name:"โรงเรียนทุ่งสองห้อง (คุปตัษเฐียรอุทิศ)",district:"หลักสี่",zone:"กรุงเทพเหนือ",demand:1},
+  {lat:13.88923,lng:100.5825,name:"โรงเรียนวัดหลักสี่ (ทองใบทิวารีวิทยา)",district:"หลักสี่",zone:"กรุงเทพเหนือ",demand:1},
+  {lat:13.901,lng:100.5832,name:"โรงเรียนเคหะทุ่งสองห้องวิทยา 1",district:"หลักสี่",zone:"กรุงเทพเหนือ",demand:1},
+  {lat:13.82207,lng:100.5173,name:"โรงเรียนวัดมัชฌันติการาม",district:"บางซื่อ",zone:"กรุงเทพเหนือ",demand:17},
+  {lat:13.80127,lng:100.5237,name:"โรงเรียนวัดประดู่ธรรมาธิปัตย์",district:"บางซื่อ",zone:"กรุงเทพเหนือ",demand:5},
+  {lat:13.80886,lng:100.5197,name:"โรงเรียนวัดบางโพโอมาวาส",district:"บางซื่อ",zone:"กรุงเทพเหนือ",demand:2},
+  {lat:13.82872,lng:100.5213,name:"โรงเรียนวัดเลียบราษฎร์บำรุง",district:"บางซื่อ",zone:"กรุงเทพเหนือ",demand:1},
+  {lat:13.8185,lng:100.5191,name:"โรงเรียนวัดประชาศรัทธาธรรม",district:"บางซื่อ",zone:"กรุงเทพเหนือ",demand:1},
+  {lat:13.81345,lng:100.5177,name:"โรงเรียนวัดสร้อยทอง",district:"บางซื่อ",zone:"กรุงเทพเหนือ",demand:1},
+  {lat:13.83287,lng:100.5298,name:"โรงเรียนวัดทองสุทธาราม",district:"บางซื่อ",zone:"กรุงเทพเหนือ",demand:1},
+  {lat:13.87736,lng:100.5982,name:"โรงเรียนไทยนิยมสงเคราะห์",district:"บางเขน",zone:"กรุงเทพเหนือ",demand:12},
+  {lat:13.87304,lng:100.597,name:"โรงเรียนประชาภิบาล",district:"บางเขน",zone:"กรุงเทพเหนือ",demand:2},
+  {lat:13.88593,lng:100.625,name:"โรงเรียนวัดราษฎร์นิยมธรรม (พิบูลสงคราม)",district:"บางเขน",zone:"กรุงเทพเหนือ",demand:1},
+  {lat:13.70594,lng:100.5042,name:"โรงเรียนวัดราชสิงขร",district:"บางคอแหลม",zone:"กรุงเทพใต้",demand:48},
+  {lat:13.6873,lng:100.512,name:"โรงเรียนวัดบางโคล่นอก",district:"บางคอแหลม",zone:"กรุงเทพใต้",demand:11},
+  {lat:13.70079,lng:100.4972,name:"โรงเรียนวัดลาดบัวขาว",district:"บางคอแหลม",zone:"กรุงเทพใต้",demand:7},
+  {lat:13.69023,lng:100.5182,name:"โรงเรียนวัดไทร",district:"บางคอแหลม",zone:"กรุงเทพใต้",demand:9},
+  {lat:13.69013,lng:100.5016,name:"โรงเรียนวัดจันทร์นอก",district:"บางคอแหลม",zone:"กรุงเทพใต้",demand:6},
+  {lat:13.70127,lng:100.5235,name:"โรงเรียนวัดไผ่เงินโชตนาราม",district:"บางคอแหลม",zone:"กรุงเทพใต้",demand:2},
+  {lat:13.6953,lng:100.5039,name:"โรงเรียนวัดจันทร์ใน",district:"บางคอแหลม",zone:"กรุงเทพใต้",demand:1},
+  {lat:13.7402,lng:100.5937,name:"โรงเรียนวิจิตรวิทยา",district:"วัฒนา",zone:"กรุงเทพใต้",demand:26},
+  {lat:13.74315,lng:100.5802,name:"โรงเรียนสุเหร่าบ้านดอน",district:"วัฒนา",zone:"กรุงเทพใต้",demand:22},
+  {lat:13.73917,lng:100.5877,name:"โรงเรียนแจ่มจันทร์",district:"วัฒนา",zone:"กรุงเทพใต้",demand:5},
+  {lat:13.7398,lng:100.5663,name:"โรงเรียนสวัสดีวิทยา",district:"วัฒนา",zone:"กรุงเทพใต้",demand:2},
+  {lat:13.73318,lng:100.6405,name:"โรงเรียนคลองกลันตัน (มีสุวรรณอนุสรณ์)",district:"สวนหลวง",zone:"กรุงเทพใต้",demand:22},
+  {lat:13.71376,lng:100.6306,name:"โรงเรียนวัดปากบ่อ",district:"สวนหลวง",zone:"กรุงเทพใต้",demand:9},
+  {lat:13.73074,lng:100.6132,name:"โรงเรียนนาคนาวาอุปถัมภ์",district:"สวนหลวง",zone:"กรุงเทพใต้",demand:8},
+  {lat:13.71633,lng:100.6393,name:"โรงเรียนสุเหร่าใหม่",district:"สวนหลวง",zone:"กรุงเทพใต้",demand:3},
+  {lat:13.73765,lng:100.6435,name:"โรงเรียนหัวหมาก",district:"สวนหลวง",zone:"กรุงเทพใต้",demand:2},
+  {lat:13.73152,lng:100.613,name:"โรงเรียนมัธยมนาคนาวาอุปถัมภ์",district:"สวนหลวง",zone:"กรุงเทพใต้",demand:1},
+  {lat:13.70252,lng:100.6223,name:"โรงเรียนวัดราษฎร์ศรัทธาธรรม",district:"พระโขนง",zone:"กรุงเทพใต้",demand:29},
+  {lat:13.68333,lng:100.6038,name:"โรงเรียนพูนสิน (เพชรสุขอุปถัมภ์)",district:"พระโขนง",zone:"กรุงเทพใต้",demand:3},
+  {lat:13.73178,lng:100.5195,name:"โรงเรียนวัดแก้วแจ่มฟ้า",district:"บางรัก",zone:"กรุงเทพใต้",demand:13},
+  {lat:13.73191,lng:100.5286,name:"โรงเรียนวัดหัวลำโพง",district:"บางรัก",zone:"กรุงเทพใต้",demand:12},
+  {lat:13.72624,lng:100.5151,name:"โรงเรียนวัดม่วงแค",district:"บางรัก",zone:"กรุงเทพใต้",demand:7},
+  {lat:13.73219,lng:100.5171,name:"โรงเรียนวัดมหาพฤฒาราม",district:"บางรัก",zone:"กรุงเทพใต้",demand:5},
+  {lat:13.72199,lng:100.5158,name:"โรงเรียนวัดสวนพลู",district:"บางรัก",zone:"กรุงเทพใต้",demand:3},
+  {lat:13.71012,lng:100.5607,name:"โรงเรียนวัดคลองเตย",district:"คลองเตย",zone:"กรุงเทพใต้",demand:15},
+  {lat:13.71104,lng:100.5746,name:"โรงเรียนชุมชนหมู่บ้านพัฒนา",district:"คลองเตย",zone:"กรุงเทพใต้",demand:8},
+  {lat:13.70411,lng:100.5885,name:"โรงเรียนวัดสะพาน",district:"คลองเตย",zone:"กรุงเทพใต้",demand:4},
+  {lat:13.66447,lng:100.5979,name:"โรงเรียนเพี้ยนพินอนุสรณ์",district:"บางนา",zone:"กรุงเทพใต้",demand:4},
+  {lat:13.67703,lng:100.6116,name:"โรงเรียนรุ่งเรืองอุปถัมภ์",district:"บางนา",zone:"กรุงเทพใต้",demand:11},
+  {lat:13.67625,lng:100.588,name:"โรงเรียนวัดบางนานอก",district:"บางนา",zone:"กรุงเทพใต้",demand:4},
+  {lat:13.66775,lng:100.6438,name:"โรงเรียนศรีเอี่ยมอนุสรณ์",district:"บางนา",zone:"กรุงเทพใต้",demand:1},
+  {lat:13.74804,lng:100.5234,name:"โรงเรียนวัดชัยมงคล",district:"ปทุมวัน",zone:"กรุงเทพใต้",demand:6},
+  {lat:13.74765,lng:100.5185,name:"โรงเรียนวัดสระบัว",district:"ปทุมวัน",zone:"กรุงเทพใต้",demand:4},
+  {lat:13.74206,lng:100.5195,name:"โรงเรียนวัดดวงแข",district:"ปทุมวัน",zone:"กรุงเทพใต้",demand:2},
+  {lat:13.73307,lng:100.5452,name:"โรงเรียนสวนลุมพินี",district:"ปทุมวัน",zone:"กรุงเทพใต้",demand:2},
+  {lat:13.7285,lng:100.55,name:"โรงเรียนปลูกจิต",district:"ปทุมวัน",zone:"กรุงเทพใต้",demand:1},
+  {lat:13.75173,lng:100.5202,name:"โรงเรียนวัดบรมนิวาส",district:"ปทุมวัน",zone:"กรุงเทพใต้",demand:1},
+  {lat:13.71379,lng:100.5169,name:"โรงเรียนวัดดอน",district:"สาทร",zone:"กรุงเทพใต้",demand:6},
+  {lat:13.71771,lng:100.5128,name:"โรงเรียนวัดยานนาวา",district:"สาทร",zone:"กรุงเทพใต้",demand:5},
+  {lat:13.70442,lng:100.546,name:"โรงเรียนวัดช่องลม",district:"ยานนาวา",zone:"กรุงเทพใต้",demand:1},
+  {lat:13.69368,lng:100.5446,name:"โรงเรียนวัดช่องนนทรี",district:"ยานนาวา",zone:"กรุงเทพใต้",demand:1},
+  {lat:13.79113,lng:100.413,name:"โรงเรียนฉิมพลี",district:"ตลิ่งชัน",zone:"ธนบุรีเหนือ",demand:40},
+  {lat:13.75922,lng:100.4332,name:"โรงเรียนวัดอินทราวาส",district:"ตลิ่งชัน",zone:"ธนบุรีเหนือ",demand:24},
+  {lat:13.77435,lng:100.4422,name:"โรงเรียนวัดทอง (อุดมศิลปวิทยาคาร)",district:"ตลิ่งชัน",zone:"ธนบุรีเหนือ",demand:13},
+  {lat:13.74771,lng:100.443,name:"โรงเรียนวัดกระโจมทอง",district:"ตลิ่งชัน",zone:"ธนบุรีเหนือ",demand:6},
+  {lat:13.76939,lng:100.4267,name:"โรงเรียนวัดโพธิ์ (ราษฎร์ผดุงผล)",district:"ตลิ่งชัน",zone:"ธนบุรีเหนือ",demand:4},
+  {lat:13.78494,lng:100.4655,name:"โรงเรียนวัดไก่เตี้ย (สวัสดิ์ประชานุกูล)",district:"ตลิ่งชัน",zone:"ธนบุรีเหนือ",demand:3},
+  {lat:13.77553,lng:100.4281,name:"โรงเรียนวัดมะกอก (วิสุทธิวิทยาคาร)",district:"ตลิ่งชัน",zone:"ธนบุรีเหนือ",demand:2},
+  {lat:13.79423,lng:100.4672,name:"โรงเรียนวัดชัยพฤกษมาลา",district:"ตลิ่งชัน",zone:"ธนบุรีเหนือ",demand:1},
+  {lat:13.75823,lng:100.4495,name:"โรงเรียนวัดประสาท",district:"ตลิ่งชัน",zone:"ธนบุรีเหนือ",demand:1},
+  {lat:13.74402,lng:100.4591,name:"โรงเรียนวัดปากน้ำฝั่งเหนือ",district:"ตลิ่งชัน",zone:"ธนบุรีเหนือ",demand:1},
+  {lat:13.68822,lng:100.4795,name:"โรงเรียนวัดนาคนิมิตร",district:"จอมทอง",zone:"ธนบุรีเหนือ",demand:42},
+  {lat:13.69103,lng:100.4557,name:"โรงเรียนวัดไทร (ถาวรพรหมานุกูล)",district:"จอมทอง",zone:"ธนบุรีเหนือ",demand:19},
+  {lat:13.67895,lng:100.4641,name:"โรงเรียนวัดสีสุก",district:"จอมทอง",zone:"ธนบุรีเหนือ",demand:8},
+  {lat:13.70317,lng:100.4668,name:"โรงเรียนวัดนางนอง (พิพัฒน์)",district:"จอมทอง",zone:"ธนบุรีเหนือ",demand:7},
+  {lat:13.69679,lng:100.4652,name:"โรงเรียนวัดบางขุนเทียนนอก (ศิลปเดชศึกษาคาร)",district:"จอมทอง",zone:"ธนบุรีเหนือ",demand:5},
+  {lat:13.67461,lng:100.4647,name:"โรงเรียนวัดยายร่ม (วัฒนราษฎร์รังสรรค์)",district:"จอมทอง",zone:"ธนบุรีเหนือ",demand:5},
+  {lat:13.69573,lng:100.48,name:"โรงเรียนวัดมงคลวราราม",district:"จอมทอง",zone:"ธนบุรีเหนือ",demand:3},
+  {lat:13.69486,lng:100.459,name:"โรงเรียนวัดบางประทุนนอก",district:"จอมทอง",zone:"ธนบุรีเหนือ",demand:4},
+  {lat:13.70638,lng:100.4606,name:"โรงเรียนวัดศาลาครืน",district:"จอมทอง",zone:"ธนบุรีเหนือ",demand:3},
+  {lat:13.71307,lng:100.4935,name:"โรงเรียนมัธยมวัดสุทธาราม",district:"คลองสาน",zone:"ธนบุรีเหนือ",demand:76},
+  {lat:13.73275,lng:100.4972,name:"โรงเรียนวัดพิชัยญาติ",district:"คลองสาน",zone:"ธนบุรีเหนือ",demand:7},
+  {lat:13.73402,lng:100.5064,name:"โรงเรียนวัดทองธรรมชาติ",district:"คลองสาน",zone:"ธนบุรีเหนือ",demand:3},
+  {lat:13.7242,lng:100.5105,name:"โรงเรียนวัดสุวรรณ",district:"คลองสาน",zone:"ธนบุรีเหนือ",demand:1},
+  {lat:13.72447,lng:100.5007,name:"โรงเรียนวัดทองเพลง",district:"คลองสาน",zone:"ธนบุรีเหนือ",demand:1},
+  {lat:13.78017,lng:100.4951,name:"โรงเรียนวัดเปาโรหิตย์",district:"บางพลัด",zone:"ธนบุรีเหนือ",demand:15},
+  {lat:13.79739,lng:100.5023,name:"โรงเรียนวัดสามัคคีสุทธาวาส",district:"บางพลัด",zone:"ธนบุรีเหนือ",demand:14},
+  {lat:13.77552,lng:100.4905,name:"โรงเรียนบางยี่ขันวิทยาคม",district:"บางพลัด",zone:"ธนบุรีเหนือ",demand:13},
+  {lat:13.76902,lng:100.4932,name:"โรงเรียนวัดพระยาศิริไอยสวรรค์",district:"บางพลัด",zone:"ธนบุรีเหนือ",demand:6},
+  {lat:13.78131,lng:100.4844,name:"โรงเรียนวัดรวก",district:"บางพลัด",zone:"ธนบุรีเหนือ",demand:5},
+  {lat:13.79035,lng:100.5063,name:"โรงเรียนวัดอาวุธวิกสิตาราม",district:"บางพลัด",zone:"ธนบุรีเหนือ",demand:5},
+  {lat:13.81087,lng:100.5146,name:"โรงเรียนวัดวิมุตยาราม",district:"บางพลัด",zone:"ธนบุรีเหนือ",demand:3},
+  {lat:13.80188,lng:100.5135,name:"โรงเรียนวัดฉัตรแก้วจงกลณี",district:"บางพลัด",zone:"ธนบุรีเหนือ",demand:2},
+  {lat:13.72075,lng:100.4847,name:"โรงเรียนวัดโพธินิมิตร",district:"ธนบุรี",zone:"ธนบุรีเหนือ",demand:22},
+  {lat:13.71984,lng:100.4709,name:"โรงเรียนวัดขุนจันทร์",district:"ธนบุรี",zone:"ธนบุรีเหนือ",demand:10},
+  {lat:13.71582,lng:100.4755,name:"โรงเรียนวัดบางสะแกนอก",district:"ธนบุรี",zone:"ธนบุรีเหนือ",demand:5},
+  {lat:13.71488,lng:100.4859,name:"โรงเรียนวัดกระจับพินิจ",district:"ธนบุรี",zone:"ธนบุรีเหนือ",demand:4},
+  {lat:13.72901,lng:100.4886,name:"โรงเรียนวัดใหญ่ศรีสุพรรณ",district:"ธนบุรี",zone:"ธนบุรีเหนือ",demand:2},
+  {lat:13.69633,lng:100.4882,name:"โรงเรียนวัดดาวคนอง",district:"ธนบุรี",zone:"ธนบุรีเหนือ",demand:2},
+  {lat:13.72624,lng:100.486,name:"โรงเรียนวัดเวฬุราชิณ",district:"ธนบุรี",zone:"ธนบุรีเหนือ",demand:2},
+  {lat:13.70038,lng:100.4883,name:"โรงเรียนวัดบุคคโล",district:"ธนบุรี",zone:"ธนบุรีเหนือ",demand:1},
+  {lat:13.7041,lng:100.4907,name:"โรงเรียนวัดบางน้ำชน",district:"ธนบุรี",zone:"ธนบุรีเหนือ",demand:1},
+  {lat:13.71155,lng:100.4755,name:"โรงเรียนวัดบางสะแกใน",district:"ธนบุรี",zone:"ธนบุรีเหนือ",demand:1},
+  {lat:13.72271,lng:100.4801,name:"โรงเรียนวัดราชคฤห์",district:"ธนบุรี",zone:"ธนบุรีเหนือ",demand:1},
+  {lat:13.76405,lng:100.4872,name:"โรงเรียนวัดดุสิตาราม",district:"บางกอกน้อย",zone:"ธนบุรีเหนือ",demand:7},
+  {lat:13.74433,lng:100.4719,name:"โรงเรียนวัดโพธิ์เรียง",district:"บางกอกน้อย",zone:"ธนบุรีเหนือ",demand:7},
+  {lat:13.76706,lng:100.469,name:"โรงเรียนวัดบางขุนนนท์",district:"บางกอกน้อย",zone:"ธนบุรีเหนือ",demand:6},
+  {lat:13.75694,lng:100.4824,name:"โรงเรียนวัดวิเศษการ",district:"บางกอกน้อย",zone:"ธนบุรีเหนือ",demand:6},
+  {lat:13.74319,lng:100.4675,name:"โรงเรียนวัดบางเสาธง",district:"บางกอกน้อย",zone:"ธนบุรีเหนือ",demand:4},
+  {lat:13.75393,lng:100.474,name:"โรงเรียนวัดยางสุทธาราม",district:"บางกอกน้อย",zone:"ธนบุรีเหนือ",demand:4},
+  {lat:13.75145,lng:100.4754,name:"โรงเรียนวัดดงมูลเหล็ก",district:"บางกอกน้อย",zone:"ธนบุรีเหนือ",demand:4},
+  {lat:13.76681,lng:100.4725,name:"โรงเรียนวัดศรีสุดาราม",district:"บางกอกน้อย",zone:"ธนบุรีเหนือ",demand:3},
+  {lat:13.74837,lng:100.4834,name:"โรงเรียนวัดพระยาทำ",district:"บางกอกน้อย",zone:"ธนบุรีเหนือ",demand:3},
+  {lat:13.76212,lng:100.4777,name:"โรงเรียนวัดสุวรรณาราม",district:"บางกอกน้อย",zone:"ธนบุรีเหนือ",demand:1},
+  {lat:13.74861,lng:100.4757,name:"โรงเรียนวัดอัมพวา",district:"บางกอกน้อย",zone:"ธนบุรีเหนือ",demand:1},
+  {lat:13.74123,lng:100.4748,name:"โรงเรียนวัดดีดวด",district:"บางกอกใหญ่",zone:"ธนบุรีเหนือ",demand:11},
+  {lat:13.73347,lng:100.4728,name:"โรงเรียนวัดท่าพระ",district:"บางกอกใหญ่",zone:"ธนบุรีเหนือ",demand:5},
+  {lat:13.73579,lng:100.485,name:"โรงเรียนวัดราชสิทธาราม",district:"บางกอกใหญ่",zone:"ธนบุรีเหนือ",demand:5},
+  {lat:13.74117,lng:100.4823,name:"โรงเรียนวัดใหม่พิเรนทร์",district:"บางกอกใหญ่",zone:"ธนบุรีเหนือ",demand:3},
+  {lat:13.74593,lng:100.484,name:"โรงเรียนวัดนาคกลาง",district:"บางกอกใหญ่",zone:"ธนบุรีเหนือ",demand:3},
+  {lat:13.76681,lng:100.4725,name:"โรงเรียนวัดศรีสุดาราม",district:"บางกอกใหญ่",zone:"ธนบุรีเหนือ",demand:1},
+  {lat:13.80152,lng:100.3352,name:"โรงเรียนวัดปุรณาวาส",district:"ทวีวัฒนา",zone:"ธนบุรีเหนือ",demand:16},
+  {lat:13.80124,lng:100.337,name:"โรงเรียนมัธยมปุรณาวาส",district:"ทวีวัฒนา",zone:"ธนบุรีเหนือ",demand:3},
+  {lat:13.73318,lng:100.6405,name:"โรงเรียนคลองกลันตัน (มีสุวรรณอนุสรณ์)",district:"ทวีวัฒนา",zone:"ธนบุรีเหนือ",demand:2},
+  {lat:13.78351,lng:100.3838,name:"โรงเรียนคลองต้นไทร (สุขล้อมอุทิศ)",district:"ทวีวัฒนา",zone:"ธนบุรีเหนือ",demand:1},
+  {lat:13.67698,lng:100.3394,name:"โรงเรียนวัดหนองแขม (สหราษฎร์บูรณะ)",district:"หนองแขม",zone:"ธนบุรีใต้",demand:91},
+  {lat:13.65699,lng:100.3439,name:"โรงเรียนวัดศรีนวลธรรมวิมล",district:"หนองแขม",zone:"ธนบุรีใต้",demand:22},
+  {lat:13.6868,lng:100.3638,name:"โรงเรียนประชาบำรุง",district:"หนองแขม",zone:"ธนบุรีใต้",demand:8},
+  {lat:13.72189,lng:100.343,name:"โรงเรียนบ้านขุนประเทศ",district:"หนองแขม",zone:"ธนบุรีใต้",demand:6},
+  {lat:13.70404,lng:100.3491,name:"โรงเรียนวัดอุดมรังสี",district:"หนองแขม",zone:"ธนบุรีใต้",demand:2},
+  {lat:13.72618,lng:100.3595,name:"โรงเรียนมนต์จรัสสิงห์อนุสรณ์",district:"หนองแขม",zone:"ธนบุรีใต้",demand:1},
+  {lat:13.64571,lng:100.5114,name:"โรงเรียนสามัคคีบำรุง",district:"ทุ่งครุ",zone:"ธนบุรีใต้",demand:33},
+  {lat:13.64769,lng:100.4951,name:"โรงเรียนนาหลวง",district:"ทุ่งครุ",zone:"ธนบุรีใต้",demand:20},
+  {lat:13.65715,lng:100.5095,name:"โรงเรียนชูสินทองประดิษฐ์อนุสรณ์",district:"ทุ่งครุ",zone:"ธนบุรีใต้",demand:13},
+  {lat:13.61923,lng:100.512,name:"โรงเรียนวัดทุ่งครุ (พึ่งสายอนุสรณ์)",district:"ทุ่งครุ",zone:"ธนบุรีใต้",demand:9},
+  {lat:13.6545,lng:100.4717,name:"โรงเรียนบางมด (ตันเปาว์วิทยาคาร)",district:"ทุ่งครุ",zone:"ธนบุรีใต้",demand:7},
+  {lat:13.63572,lng:100.5148,name:"โรงเรียนคลองรางจาก",district:"ทุ่งครุ",zone:"ธนบุรีใต้",demand:6},
+  {lat:13.63382,lng:100.4194,name:"โรงเรียนวัดสะแกงาม",district:"บางขุนเทียน",zone:"ธนบุรีใต้",demand:24},
+  {lat:13.65222,lng:100.4473,name:"โรงเรียนวัดท่าข้าม",district:"บางขุนเทียน",zone:"ธนบุรีใต้",demand:17},
+  {lat:13.67898,lng:100.4464,name:"โรงเรียนวัดกำแพง",district:"บางขุนเทียน",zone:"ธนบุรีใต้",demand:11},
+  {lat:13.57809,lng:100.39,name:"โรงเรียนหมู่บ้านเกาะโพธิ์",district:"บางขุนเทียน",zone:"ธนบุรีใต้",demand:5},
+  {lat:13.5909,lng:100.3862,name:"โรงเรียนวัดแสมดำ",district:"บางขุนเทียน",zone:"ธนบุรีใต้",demand:4},
+  {lat:13.64705,lng:100.4248,name:"โรงเรียนบางขุนเทียนศึกษา",district:"บางขุนเทียน",zone:"ธนบุรีใต้",demand:3},
+  {lat:13.66612,lng:100.4473,name:"โรงเรียนวัดเลา (คณะศิษย์เทพสิทธิอุทิศ)",district:"บางขุนเทียน",zone:"ธนบุรีใต้",demand:3},
+  {lat:13.59914,lng:100.405,name:"โรงเรียนวัดบางกระดี่",district:"บางขุนเทียน",zone:"ธนบุรีใต้",demand:2},
+  {lat:13.61992,lng:100.4494,name:"โรงเรียนวัดหัวกระบือ",district:"บางขุนเทียน",zone:"ธนบุรีใต้",demand:1},
+  {lat:13.67371,lng:100.4493,name:"โรงเรียนวัดกก",district:"บางขุนเทียน",zone:"ธนบุรีใต้",demand:1},
+  {lat:13.52767,lng:100.4203,name:"โรงเรียนคลองพิทยาลงกรณ์",district:"บางขุนเทียน",zone:"ธนบุรีใต้",demand:1},
+  {lat:13.61218,lng:100.4768,name:"โรงเรียนวัดบัวผัน",district:"บางขุนเทียน",zone:"ธนบุรีใต้",demand:1},
+  {lat:13.66406,lng:100.4271,name:"โรงเรียนศาลเจ้า (ห้าวนุกูลวิทยา)",district:"บางขุนเทียน",zone:"ธนบุรีใต้",demand:1},
+  {lat:13.6821,lng:100.4955,name:"โรงเรียนวัดบางปะกอก",district:"ราษฎร์บูรณะ",zone:"ธนบุรีใต้",demand:37},
+  {lat:13.66933,lng:100.4921,name:"โรงเรียนรัตนจีนะอุทิศ",district:"ราษฎร์บูรณะ",zone:"ธนบุรีใต้",demand:31},
+  {lat:13.67239,lng:100.5133,name:"โรงเรียนวัดสน",district:"ราษฎร์บูรณะ",zone:"ธนบุรีใต้",demand:9},
+  {lat:13.67353,lng:100.503,name:"โรงเรียนวัดสารอด",district:"ราษฎร์บูรณะ",zone:"ธนบุรีใต้",demand:5},
+  {lat:13.6753,lng:100.5199,name:"โรงเรียนวัดแจงร้อน",district:"ราษฎร์บูรณะ",zone:"ธนบุรีใต้",demand:1},
+  {lat:13.79113,lng:100.413,name:"โรงเรียนฉิมพลี",district:"ราษฎร์บูรณะ",zone:"ธนบุรีใต้",demand:1},
+  {lat:13.6638,lng:100.399,name:"โรงเรียนบ้านนายสี",district:"บางบอน",zone:"ธนบุรีใต้",demand:7},
+  {lat:13.68202,lng:100.436,name:"โรงเรียนคงโครัดอุทิศ",district:"บางบอน",zone:"ธนบุรีใต้",demand:4},
+  {lat:13.67425,lng:100.4046,name:"โรงเรียนวัดนินสุขาราม",district:"บางบอน",zone:"ธนบุรีใต้",demand:1},
+  {lat:13.6936,lng:100.393,name:"โรงเรียนวัดม่วง",district:"บางแค",zone:"ธนบุรีใต้",demand:11},
+  {lat:13.70445,lng:100.3847,name:"โรงเรียนเพชรเกษม (จตุรงค์สงครามอนุสรณ์)",district:"บางแค",zone:"ธนบุรีใต้",demand:10},
+  {lat:13.70146,lng:100.3795,name:"โรงเรียนวัดราษฎร์บำรุง (งามศิริวิทยาคาร)",district:"บางแค",zone:"ธนบุรีใต้",demand:8},
+  {lat:13.74933,lng:100.3546,name:"โรงเรียนวัดศาลาแดง",district:"บางแค",zone:"ธนบุรีใต้",demand:7},
+  {lat:13.7304,lng:100.3887,name:"โรงเรียนวัดบุณยประดิษฐ์",district:"บางแค",zone:"ธนบุรีใต้",demand:2},
+  {lat:13.73993,lng:100.4602,name:"โรงเรียนวัดวิจิตรการนิมิตร",district:"ภาษีเจริญ",zone:"ธนบุรีใต้",demand:8},
+  {lat:13.71619,lng:100.4531,name:"โรงเรียนวัดอ่างแก้ว (จีบ ปานขำ)",district:"ภาษีเจริญ",zone:"ธนบุรีใต้",demand:5},
+  {lat:13.72688,lng:100.4465,name:"โรงเรียนบางจาก (โกมลประเสริฐอุทิศ)",district:"ภาษีเจริญ",zone:"ธนบุรีใต้",demand:4},
+  {lat:13.72105,lng:100.4404,name:"โรงเรียนวัดจันทร์ประดิษฐาราม",district:"ภาษีเจริญ",zone:"ธนบุรีใต้",demand:3},
+  {lat:13.7363,lng:100.4529,name:"โรงเรียนวัดโตนด",district:"ภาษีเจริญ",zone:"ธนบุรีใต้",demand:2},
+  {lat:13.67898,lng:100.4464,name:"โรงเรียนวัดกำแพง",district:"ภาษีเจริญ",zone:"ธนบุรีใต้",demand:2},
+  {lat:13.74395,lng:100.4202,name:"โรงเรียนวัดมะพร้าวเตี้ย",district:"ภาษีเจริญ",zone:"ธนบุรีใต้",demand:1},
+  {lat:13.70933,lng:100.4268,name:"โรงเรียนวัดนิมมานรดี",district:"ภาษีเจริญ",zone:"ธนบุรีใต้",demand:1},
+];
+
 const catColor = {
   "ต่ำกว่า 3 แสน": "#4FCC4B",
   "ต่ำกว่า 5 แสน": "#f97316",
@@ -769,8 +1095,10 @@ const catColor = {
 };
 
 let map;
-let layers = { npl: null, school: null, district: null, sam: null };
-let visible = { npl: true, school: true, district: true, sam: true };
+let layers = { npl: null, school: null, district: null, sam: null, demand: null };
+let visible = { npl: true, school: true, district: true, sam: true, demand: true };
+let heatLayer = null;
+let demandMarkers = null;
 
 function getRadius(count) { return Math.max(12, Math.sqrt(count) * 5); }
 function getOpacity(count) {
@@ -785,7 +1113,7 @@ function initMap() {
   map = L.map('map', { center: [13.75, 100.58], zoom: 10 });
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    maxZoom: 50
+    maxZoom: 17
   }).addTo(map);
 
   // NPL layer
@@ -813,7 +1141,7 @@ function initMap() {
   // School layer
   const schoolIcon = L.divIcon({
     html: '<div style="width:8px;height:8px;border-radius:50%;background:#059669;border:1.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3)"></div>',
-    iconSize: [11,11], iconAnchor: [5,5], className: ''
+    iconSize: [11, 11], iconAnchor: [5, 5], className: ''
   });
   layers.school = L.layerGroup();
   schoolData.forEach(s => {
@@ -832,12 +1160,12 @@ function initMap() {
   layers.district = L.layerGroup();
   districtData.forEach(d => {
     const icon = L.divIcon({
-    html: `<div style="width:8px;height:8px;font-size:13px;line-height:11px;text-align:center;color:#7c3aed;-webkit-text-stroke:2.5px #fff;paint-order:stroke fill;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));">★</div>`,
-    iconSize: [11, 11], iconAnchor: [5, 5], className: ''
+    html: `<div style="width:8px;height:8px;font-size:9px;line-height:11px;text-align:center;color:#7c3aed;-webkit-text-stroke:2.5px #fff;paint-order:stroke fill;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));">★</div>`,
+    iconSize: [8, 8], iconAnchor: [4, 4], className: ''
   });
     const m = L.marker([d.lat, d.lng], { icon });
     m.bindPopup(`
-      <div class="popup-title">🏛️ ${d.name}</div>
+      <div class="popup-title">🏛️ ${d.name}</divß>
       <div class="popup-row" style="margin-top:4px">${d.address}</div>
       <div class="popup-row" style="margin-top:4px">โทร: <b>${d.tel}</b></div>
     `);
@@ -865,6 +1193,52 @@ function initMap() {
     layers.sam.addLayer(circle);
   });
 
+  // Housing Demand Heatmap + clickable markers
+  const heatPoints = demandData.map(d => [d.lat, d.lng, d.demand]);
+  heatLayer = L.heatLayer(heatPoints, {
+    radius: 35,
+    blur: 25,
+    maxZoom: 13,
+    max: 50,
+    gradient: {
+      0.0: '#3b82f6',
+      0.3: '#22d3ee',
+      0.5: '#4ade80',
+      0.7: '#facc15',
+      0.85: '#f97316',
+      1.0: '#ef4444'
+    }
+  });
+  heatLayer.addTo(map);
+
+  // จุดโปร่งใสซ้อนบน heatmap เพื่อให้คลิกได้
+  demandMarkers = L.layerGroup();
+  demandData.forEach(d => {
+    const intensity = d.demand / 50;
+    const color = intensity >= 0.85 ? '#ef4444'
+                : intensity >= 0.70 ? '#f97316'
+                : intensity >= 0.50 ? '#facc15'
+                : intensity >= 0.30 ? '#4ade80'
+                : '#22d3ee';
+    const circle = L.circleMarker([d.lat, d.lng], {
+      radius: 3,
+      fillColor: color,
+      color: '#fff',
+      weight: 1.5,
+      opacity: 1,
+      fillOpacity: 0.85
+    });
+    circle.bindPopup(`
+      <div class="popup-title">🏠 ${d.name}</div>
+      <div class="popup-badge" style="background:#f43f5e20;color:#f43f5e;border:1px solid #f43f5e40">Housing Demand</div>
+      <div class="popup-row">เขต: <b>${d.district}</b></div>
+      <div class="popup-row">โซน: <b>${d.zone}</b></div>
+      <div class="popup-row">ความต้องการที่อยู่อาศัย: <b>${fmtNum(d.demand)} คน</b></div>
+    `);
+    demandMarkers.addLayer(circle);
+  });
+  demandMarkers.addTo(map);
+
   layers.npl.addTo(map);
   layers.school.addTo(map);
   layers.district.addTo(map);
@@ -874,12 +1248,25 @@ function initMap() {
 function toggleLayer(name) {
   visible[name] = !visible[name];
   const btn = document.getElementById('btn-' + name);
-  if (visible[name]) {
-    layers[name].addTo(map);
-    btn.classList.add('active');
+
+  if (name === 'demand') {
+    if (visible[name]) {
+      heatLayer.addTo(map);
+      demandMarkers.addTo(map);
+      btn.classList.add('active');
+    } else {
+      map.removeLayer(heatLayer);
+      map.removeLayer(demandMarkers);
+      btn.classList.remove('active');
+    }
   } else {
-    map.removeLayer(layers[name]);
-    btn.classList.remove('active');
+    if (visible[name]) {
+      layers[name].addTo(map);
+      btn.classList.add('active');
+    } else {
+      map.removeLayer(layers[name]);
+      btn.classList.remove('active');
+    }
   }
 }
 
